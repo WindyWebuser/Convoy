@@ -475,7 +475,7 @@ function animLoop(now){
   if(map && map.setBearing){
     const d=((targetBearing-curBearing+540)%360)-180;
     if(Math.abs(d)>0.05){
-      curBearing=(curBearing + d*0.05 + 360)%360;
+      curBearing=(curBearing + d*0.025 + 360)%360;
       map.setBearing(curBearing);
       // re-aim every arrow this frame so they track the rotating map (no per-second snap)
       for(const k in markers){
