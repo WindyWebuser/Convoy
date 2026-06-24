@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Convoy</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#121a2e; --line:#1f2c47;
+    --neon:#00e5ff; --neon2:#ff2e63; --amber:#ffd166; --green:#39ff88;
+    --text:#e9f0ff; --muted:#8aa0c8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); overflow:hidden;
+    touch-action:manipulation;
+  }
+  /* ---------- Lobby ---------- */
+  #lobby{
+    position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:24px;
+    background:
+      radial-gradient(900px 500px at 50% -10%, rgba(0,229,255,.18), transparent 60%),
+      repeating-linear-gradient(45deg, #0a0e1a 0 22px, #0c1120 22px 44px);
+  }
+  .logo{font-weight:800; letter-spacing:4px; font-size:34px;
+    background:linear-gradient(90deg,var(--neon),var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 30px rgba(0,229,255,.25);}
+  .tag{color:var(--muted); font-size:13px; margin-top:-10px; letter-spacing:1px}
+  .card{width:100%; max-width:380px; background:var(--panel);
+    border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:10px 2px 6px}
+  .emojis{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+  .emojis button{font-size:24px; width:46px; height:46px; border-radius:12px;
+    background:#0d1426; border:1px solid var(--line); cursor:pointer; transition:.15s}
+  .emojis button.sel{border-color:var(--neon); box-shadow:0 0 0 2px rgba(0,229,255,.3); transform:scale(1.08)}
+  input{width:100%; padding:13px 14px; border-radius:12px; background:#0d1426;
+    border:1px solid var(--line); color:var(--text); font-size:16px; outline:none}
+  input:focus{border-color:var(--neon)}
+  #code{text-transform:uppercase; letter-spacing:6px; text-align:center; font-weight:700; font-size:22px}
+  .btn{width:100%; padding:14px; border:none; border-radius:12px; font-size:16px; font-weight:700;
+    cursor:pointer; margin-top:12px; color:#04121a;
+    background:linear-gradient(90deg,var(--neon),#4df3ff); box-shadow:0 8px 24px rgba(0,229,255,.3)}
+  .btn.ghost{background:transparent; color:var(--neon); border:1px solid var(--neon); box-shadow:none}
+  .btn.red{background:linear-gradient(90deg,var(--neon2),#ff6b8a); color:#fff; box-shadow:0 8px 24px rgba(255,46,99,.3)}
+  .row{display:flex; gap:10px}
+  .row .btn{margin-top:0}
+  .err{color:var(--neon2); font-size:13px; min-height:18px; text-align:center; margin-top:8px}
+  .hint{color:var(--muted); font-size:12px; text-align:center; margin-top:14px; line-height:1.5}
+  .config-warn{background:rgba(255,209,102,.12); border:1px solid var(--amber); color:var(--amber);
+    padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px; line-height:1.5}
+  /* ---------- Map ---------- */
+  #map{position:fixed; inset:0; z-index:1; background:var(--bg)}
+  /* dark filter for the map tiles to get the racing look */
+  .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) brightness(.85) contrast(.95) saturate(.6)}
+  .marker{display:flex; flex-direction:column; align-items:center; transform:translateY(-6px)}
+  .marker .bubble{font-size:26px; line-height:1; filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+  .marker .tagname{margin-top:2px; font-size:10px; font-weight:700; color:#fff; padding:1px 6px;
+    border-radius:8px; white-space:nowrap; background:rgba(10,14,26,.85); border:1px solid var(--neon)}
+  .marker.me .tagname{border-color:var(--green); color:var(--green)}
+  .marker .spd{font-size:9px; color:var(--amber); font-weight:700}
+  /* HUD */
+  #hud{position:fixed; z-index:500; left:0; right:0; top:0; padding:10px 12px;
+    padding-top:calc(10px + env(safe-area-inset-top));
+    display:flex; align-items:center; gap:10px; pointer-events:none}
+  .pill{pointer-events:auto; background:rgba(18,26,46,.9); border:1px solid var(--line);
+    backdrop-filter:blur(10px); border-radius:14px; padding:8px 12px; display:flex; align-items:center; gap:8px}
+  .pill .k{color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:1px}
+  .pill .v{font-weight:800; font-size:15px}
+  #spdpill .v{color:var(--neon); font-variant-numeric:tabular-nums}
+  #spdpill .u{font-size:10px; color:var(--muted)}
+  #leave{pointer-events:auto; margin-left:auto; background:rgba(255,46,99,.15);
+    border:1px solid var(--neon2); color:#ff9bb1; border-radius:14px; padding:9px 12px; font-weight:700; cursor:pointer; font-size:13px}
+  /* speedometer */
+  #speedo{position:fixed; z-index:500; right:14px; bottom:calc(150px + env(safe-area-inset-bottom));
+    width:96px; height:96px; border-radius:50%; background:radial-gradient(circle at 50% 40%, #142036, #0a0e1a);
+    border:2px solid var(--neon); box-shadow:0 0 30px rgba(0,229,255,.25); display:flex; flex-direction:column;
+    align-items:center; justify-content:center}
+  #speedo .big{font-size:30px; font-weight:800; color:var(--neon); line-height:1; font-variant-numeric:tabular-nums}
+  #speedo .sm{font-size:10px; color:var(--muted); letter-spacing:1px}
+  /* convoy tray */
+  #tray{position:fixed; z-index:500; left:0; right:0; bottom:0;
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, rgba(10,14,26,.96), rgba(10,14,26,.6) 70%, transparent);
+    display:flex; gap:10px; overflow-x:auto}
+  .driver{flex:0 0 auto; min-width:96px; background:rgba(18,26,46,.92); border:1px solid var(--line);
+    border-radius:14px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; cursor:pointer}
+  .driver.me{border-color:var(--green)}
+  .driver .top{display:flex; align-items:center; gap:6px}
+  .driver .em{font-size:20px}
+  .driver .nm{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px}
+  .driver .sp{font-size:13px; font-weight:800; color:var(--amber); font-variant-numeric:tabular-nums}
+  .driver .sp small{color:var(--muted); font-weight:600; font-size:9px}
+  .driver .stale{color:var(--muted)}
+  #roomtag{position:fixed; z-index:500; left:50%; transform:translateX(-50%);
+    top:calc(58px + env(safe-area-inset-top)); background:rgba(18,26,46,.9);
+    border:1px solid var(--line); border-radius:12px; padding:5px 12px; font-size:12px; color:var(--muted)}
+  #roomtag b{color:var(--neon); letter-spacing:3px; font-size:14px}
+  .hidden{display:none !important}
+  .leaflet-control-attribution{background:rgba(10,14,26,.6)!important; color:#5a6f96!important}
+  .leaflet-control-attribution a{color:#7aa0d8!important}
+</style>
+</head>
+<body>
+
+<!-- ============ LOBBY ============ -->
+<div id="lobby">
+  <div class="logo">CONVOY</div>
+  <div class="tag">DRIVE TOGETHER · STAY TOGETHER</div>
+  <div class="card">
+    <div id="cfgwarn" class="config-warn hidden">
+      ⚠️ Firebase not configured yet — running in <b>solo demo mode</b>. Add your config in the file to enable real multiplayer.
+    </div>
+    <div class="label">Your avatar</div>
+    <div class="emojis" id="emojiPick"></div>
+    <div class="label">Your name</div>
+    <input id="name" maxlength="12" placeholder="e.g. Maverick" autocomplete="off">
+    <div class="label">Convoy code</div>
+    <input id="code" maxlength="5" placeholder="ABCDE" autocomplete="off">
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="joinBtn">Join</button>
+      <button class="btn ghost" id="createBtn">Create</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="hint">Location is shared only with people in your convoy, only while the app is open. Leave anytime to stop sharing.</div>
+  </div>
+</div>
+
+<!-- ============ MAP ============ -->
+<div id="map"></div>
+<div id="roomtag" class="hidden">CONVOY <b id="roomcode">—</b></div>
+<div id="hud" class="hidden">
+  <div class="pill" id="spdpill"><span class="k">You</span><span class="v" id="hudspd">0</span><span class="u">km/h</span></div>
+  <div class="pill"><span class="k">Crew</span><span class="v" id="hudcount">1</span></div>
+  <button id="leave">Leave</button>
+</div>
+<div id="speedo" class="hidden"><div class="big" id="bigspd">0</div><div class="sm">KM/H</div></div>
+<div id="tray" class="hidden"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* =========================================================================
+   1) FIREBASE CONFIG  —  PASTE YOURS HERE
+   Get it from console.firebase.google.com → Project settings → Your apps.
+   Until you fill databaseURL, the app runs in solo demo mode.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey:            "AIzaSyCQVPQG2BP26cddrnvabh36UFVWyuxJsaM",
+  authDomain:        "convoy-408d8.firebaseapp.com",
+  databaseURL:       "https://convoy-408d8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "convoy-408d8",
+  storageBucket:     "convoy-408d8.firebasestorage.app",
+  messagingSenderId: "203749542302",
+  appId:             "1:203749542302:web:e0554b8d3051f0efc22e8f"
+};
+
+/* ========================================================================= */
+const CONFIGURED = !!firebaseConfig.databaseURL;
+const EMOJIS = ["🏎️","🚗","🚙","🛻","🚐","🏍️","🚓","🚕","🚌","🛵","🚜","🦊","🐺","🐉","⚡","🔥"];
+const STALE_MS = 12000;            // grey out a driver after 12s silence
+const $ = id => document.getElementById(id);
+
+let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
+let map, watchId, markers = {}, players = {}, roomRef, myRef;
+let lastLatLng = null, followMe = true;
+
+/* ---------- lobby setup ---------- */
+const emojiBox = $("emojiPick");
+EMOJIS.forEach((e,i)=>{
+  const b=document.createElement("button");
+  b.textContent=e; if(i===0)b.classList.add("sel");
+  b.onclick=()=>{ [...emojiBox.children].forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); me.emoji=e; };
+  emojiBox.appendChild(b);
+});
+$("code").addEventListener("input", e=> e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"") );
+if(!CONFIGURED) $("cfgwarn").classList.remove("hidden");
+
+/* ---------- firebase init ---------- */
+if(CONFIGURED){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  auth = firebase.auth();
+}
+
+function randCode(){ let s=""; const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; for(let i=0;i<5;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
+function showErr(m){ $("err").textContent = m||""; }
+
+$("createBtn").onclick = ()=> start(randCode(), true);
+$("joinBtn").onclick   = ()=>{
+  const c = $("code").value.trim();
+  if(c.length<4) return showErr("Enter a convoy code (or tap Create).");
+  start(c, false);
+};
+
+async function start(code, isCreate){
+  me.name = ($("name").value.trim() || "Driver").slice(0,12);
+  room = code.toUpperCase();
+  showErr("");
+
+  if(!navigator.geolocation){ return showErr("This device can't share location."); }
+
+  try{
+    if(CONFIGURED){
+      const cred = await auth.signInAnonymously();
+      uid = cred.user.uid;
+      roomRef = db.ref("rooms/"+room+"/players");
+      myRef = roomRef.child(uid);
+      // remove me automatically when tab closes / disconnects
+      myRef.onDisconnect().remove();
+      roomRef.on("value", snap => render(snap.val()||{}));
+    } else {
+      uid = "me";
+      // demo mode: a couple of simulated convoy mates
+      seedDemo();
+    }
+  }catch(e){ console.error(e); return showErr("Couldn't connect. Check your config / internet."); }
+
+  enterMap();
+  startTracking();
+}
+
+/* ---------- map ---------- */
+function enterMap(){
+  $("lobby").classList.add("hidden");
+  ["hud","speedo","tray","roomtag"].forEach(i=>$(i).classList.remove("hidden"));
+  $("roomcode").textContent = room;
+
+  map = L.map("map",{zoomControl:false, attributionControl:true}).setView([37.7749,-122.4194], 15);
+  L.control.zoom({position:"bottomleft"}).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19, attribution:'© OpenStreetMap'
+  }).addTo(map);
+  map.on("dragstart", ()=> followMe = false );
+}
+
+function icon(p, isMe){
+  const stale = Date.now() - (p.ts||0) > STALE_MS;
+  const spd = Math.round(p.speed||0);
+  return L.divIcon({
+    className:"", iconSize:[60,46], iconAnchor:[30,40],
+    html:`<div class="marker ${isMe?'me':''}">
+            <div class="bubble" style="opacity:${stale?.4:1}">${p.emoji||"🚗"}</div>
+            <div class="tagname">${esc(p.name||"Driver")}</div>
+            <div class="spd">${spd} km/h</div>
+          </div>`
+  });
+}
+function esc(s){ return String(s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+
+function render(data){
+  players = data;
+  // markers
+  Object.keys(markers).forEach(k=>{ if(!data[k]){ map.removeLayer(markers[k]); delete markers[k]; }});
+  Object.entries(data).forEach(([k,p])=>{
+    if(typeof p.lat!=="number"||typeof p.lng!=="number") return;
+    const ll=[p.lat,p.lng], isMe=k===uid;
+    if(markers[k]){ markers[k].setLatLng(ll).setIcon(icon(p,isMe)); }
+    else { markers[k]=L.marker(ll,{icon:icon(p,isMe)}).addTo(map); }
+  });
+  drawTray(data);
+  $("hudcount").textContent = Object.keys(data).length || 1;
+}
+
+function drawTray(data){
+  const tray=$("tray"); tray.innerHTML="";
+  const entries=Object.entries(data).sort((a,b)=> (b[1].speed||0)-(a[1].speed||0));
+  entries.forEach(([k,p])=>{
+    const isMe=k===uid, stale=Date.now()-(p.ts||0)>STALE_MS;
+    const d=document.createElement("div");
+    d.className="driver"+(isMe?" me":"");
+    d.innerHTML=`<div class="top"><span class="em">${p.emoji||"🚗"}</span>
+        <span class="nm">${esc(p.name||"Driver")}${isMe?" (you)":""}</span></div>
+      <span class="sp ${stale?'stale':''}">${Math.round(p.speed||0)}<small> km/h</small></span>`;
+    d.onclick=()=>{ if(typeof p.lat==="number"){ followMe=isMe; map.panTo([p.lat,p.lng]); } };
+    tray.appendChild(d);
+  });
+}
+
+/* ---------- geolocation ---------- */
+function startTracking(){
+  watchId = navigator.geolocation.watchPosition(pos=>{
+    const {latitude:lat, longitude:lng, speed} = pos.coords;
+    // speed is m/s (may be null); convert to km/h
+    const kmh = (speed!=null && speed>=0) ? Math.round(speed*3.6) : estSpeed(lat,lng,pos.timestamp);
+    lastLatLng=[lat,lng];
+    $("hudspd").textContent=kmh; $("bigspd").textContent=kmh;
+    const data={ emoji:me.emoji, name:me.name, lat, lng, speed:kmh, ts:Date.now() };
+    if(CONFIGURED && myRef){ myRef.set(data); }
+    else { players[uid]=data; render(players); moveDemo(); }
+    if(followMe) map.setView([lat,lng], map.getZoom()<14?16:map.getZoom());
+  }, err=>{
+    showErr && console.warn(err);
+    alert("Location permission is needed to share your position. Enable it in your browser settings.");
+  }, { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
+}
+
+let _prev=null;
+function estSpeed(lat,lng,t){ // fallback when device gives no speed
+  if(_prev){ const d=haversine(_prev.lat,_prev.lng,lat,lng); const dt=(t-_prev.t)/1000;
+    _prev={lat,lng,t}; return dt>0? Math.round(d/dt*3.6):0; }
+  _prev={lat,lng,t}; return 0;
+}
+function haversine(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180;
+  const dLat=r(c-a),dLng=r(d-b);const s=Math.sin(dLat/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));}
+
+/* ---------- leave ---------- */
+$("leave").onclick = ()=>{
+  if(watchId) navigator.geolocation.clearWatch(watchId);
+  if(CONFIGURED && myRef){ myRef.remove(); roomRef.off(); }
+  location.reload();
+};
+
+/* ---------- demo mode (no backend) ---------- */
+let demo=[];
+function seedDemo(){
+  demo=[
+    {id:"bot1",emoji:"🚙",name:"Nyx",off:[ .0015, .0010]},
+    {id:"bot2",emoji:"🏍️",name:"Rev",off:[-.0012, .0018]},
+  ];
+}
+function moveDemo(){
+  if(!lastLatLng) return;
+  demo.forEach(b=>{
+    b.off[0]+=(Math.random()-0.5)*.0004; b.off[1]+=(Math.random()-0.5)*.0004;
+    players[b.id]={emoji:b.emoji,name:b.name,lat:lastLatLng[0]+b.off[0],lng:lastLatLng[1]+b.off[1],
+      speed:40+Math.round(Math.random()*40), ts:Date.now()};
+  });
+  render(players);
+}
+
+/* keep stale styling fresh */
+setInterval(()=>{ if(map) { drawTray(players); Object.entries(players).forEach(([k,p])=>{ if(markers[k]) markers[k].setIcon(icon(p,k===uid)); }); } }, 4000);
+</script>
+</body>
+</html>

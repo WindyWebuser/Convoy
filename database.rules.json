@@ -1,0 +1,34 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "rooms": {
+      "$room": {
+
+        ".read": "auth != null && $room.length >= 4 && $room.length <= 8",
+
+        "players": {
+
+          "$uid": {
+
+            ".write": "auth != null && auth.uid === $uid && $room.length >= 4 && $room.length <= 8",
+
+            ".validate": "newData.hasChildren(['lat','lng','ts'])",
+
+            "lat":   { ".validate": "newData.isNumber() && newData.val() >= -90  && newData.val() <= 90" },
+            "lng":   { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+            "speed": { ".validate": "newData.isNumber() && newData.val() >= 0   && newData.val() <= 400" },
+            "name":  { ".validate": "newData.isString() && newData.val().length <= 12" },
+            "emoji": { ".validate": "newData.isString() && newData.val().length <= 8" },
+            "ts":    { ".validate": "newData.isNumber()" },
+
+            "$other": { ".validate": false }
+          }
+        },
+
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
