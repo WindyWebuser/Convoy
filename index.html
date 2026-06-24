@@ -73,7 +73,7 @@
     background:rgba(12,10,9,.92); border:2px solid var(--red); display:flex; align-items:center; justify-content:center;
     font-size:22px; box-shadow:0 0 10px rgba(255,45,45,.55), 0 2px 5px rgba(0,0,0,.6)}
   .pin.me .ring{border-color:var(--orange); box-shadow:0 0 12px rgba(255,122,24,.75), 0 2px 5px rgba(0,0,0,.6)}
-  .pin .dir{position:absolute; inset:0; transition:transform .25s ease-out}
+  .pin .dir{position:absolute; inset:0; transition:transform .45s ease-out, opacity .3s}
   .pin .arrow{position:absolute; top:-3px; left:50%; transform:translateX(-50%);
     width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:12px solid var(--red);
     filter:drop-shadow(0 0 4px rgba(255,45,45,.7))}
@@ -426,11 +426,34 @@ function render(data){
   Object.entries(data).forEach(([k,p])=>{
     if(typeof p.lat!=="number"||typeof p.lng!=="number") return;
     const isMe=k===uid;
-    if(markers[k]){ markers[k].setIcon(icon(p,isMe)); glideTo(k, p.lat, p.lng); }
-    else { markers[k]=L.marker([p.lat,p.lng],{icon:icon(p,isMe)}).addTo(map); }
+    if(markers[k]){ updateMarker(k,p,isMe); glideTo(k, p.lat, p.lng); }
+    else { markers[k]=L.marker([p.lat,p.lng],{icon:icon(p,isMe)}).addTo(map); markers[k]._rot=null; }
   });
   drawTray(data);
   $("hudcount").textContent = Object.keys(data).length || 1;
+}
+
+/* update a marker in place (so CSS transitions can smooth the heading arrow) */
+function updateMarker(k,p,isMe){
+  const m=markers[k], el=m && m._icon, pin=el && el.querySelector(".pin");
+  if(!pin){ m.setIcon(icon(p,isMe)); return; }
+  pin.style.opacity = (Date.now()-(p.ts||0) > STALE_MS) ? .45 : 1;
+  const ring=pin.querySelector(".ring"); if(ring) ring.textContent = p.emoji||"🚗";
+  const nm=pin.querySelector(".nm"); if(nm) nm.textContent = p.name||"Driver";
+  const sp=dispSpeed(p.speed||0);
+  let spd=pin.querySelector(".spd");
+  if(settings.spdLabels){ if(!spd){ spd=document.createElement("div"); spd.className="spd"; pin.appendChild(spd);} spd.textContent=sp.v+" "+sp.u; }
+  else if(spd){ spd.remove(); }
+  const h=(typeof p.heading==="number")?p.heading:null;
+  let dir=pin.querySelector(".dir");
+  if(h==null){ if(dir) dir.style.opacity=0; return; }
+  if(!dir){ dir=document.createElement("div"); dir.className="dir"; const ar=document.createElement("div"); ar.className="arrow"; dir.appendChild(ar); pin.insertBefore(dir, pin.firstChild); }
+  dir.style.opacity=1;
+  const target=(courseUp && myHeading!=null) ? (h-myHeading) : h;
+  const prev=(m._rot==null) ? target : m._rot;
+  const newRot=prev + (((target-prev)%360 + 540)%360 - 180); // shortest-path unwrap
+  m._rot=newRot;
+  dir.style.transform=`rotate(${newRot}deg)`;
 }
 
 /* ---- smooth ping motion: interpolate markers between updates ---- */
@@ -575,7 +598,7 @@ function moveDemo(){
   render(players);
 }
 
-setInterval(()=>{ if(map){ drawTray(players); Object.entries(players).forEach(([k,p])=>{ if(markers[k]) markers[k].setIcon(icon(p,k===uid)); }); } }, 4000);
+setInterval(()=>{ if(map){ drawTray(players); Object.entries(players).forEach(([k,p])=>{ if(markers[k]) updateMarker(k,p,k===uid); }); } }, 4000);
 </script>
 </body>
 </html>
