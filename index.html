@@ -83,9 +83,11 @@
   .pin.me .nm{color:var(--orange-br)}
   .pin .spd{position:absolute; top:65px; left:50%; transform:translateX(-50%); white-space:nowrap;
     font-size:10px; font-weight:800; color:var(--amber); text-shadow:0 1px 3px #000, 0 0 2px #000}
-  /* top fade — sits between map and UI, mirrors the bottom tray gradient */
+  /* top & bottom fades — sit between map and UI for readability */
   #topfade{position:fixed; left:0; right:0; top:0; height:150px; z-index:400; pointer-events:none;
     background:linear-gradient(180deg, rgba(10,10,11,.95), rgba(10,10,11,.45) 55%, transparent)}
+  #bottomfade{position:fixed; left:0; right:0; bottom:0; height:150px; z-index:400; pointer-events:none;
+    background:linear-gradient(0deg, rgba(10,10,11,.95), rgba(10,10,11,.45) 55%, transparent)}
   /* HUD */
   #hud{position:fixed; z-index:500; left:0; right:0; top:0; padding:10px 12px;
     padding-top:calc(10px + env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; pointer-events:none}
@@ -204,6 +206,7 @@
 <!-- ============ MAP ============ -->
 <div id="map"></div>
 <div id="topfade" class="hidden"></div>
+<div id="bottomfade" class="hidden"></div>
 <div id="roomtag" class="hidden">CREW <b id="roomcode">—</b></div>
 <div id="hud" class="hidden">
   <div class="pill" id="spdpill"><span class="k">You</span><span class="v" id="hudspd">0</span><span class="u" id="hudunit">km/h</span></div>
@@ -380,7 +383,7 @@ async function start(code){
 /* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["topfade","hud","tray","roomtag","controls"].forEach(i=>$(i).classList.remove("hidden"));
+  ["topfade","bottomfade","hud","tray","roomtag","controls"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
   map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5,
     rotate:true, touchRotate:false, bearing:0}).setView([13.7563,100.5018], 15); // Bangkok default
