@@ -99,27 +99,27 @@
     color:var(--orange-br); border-radius:14px; padding:9px 12px; font-weight:700; cursor:pointer; font-size:15px}
   #gear{margin-left:auto}
   #leave{background:rgba(225,6,0,.15); border:1px solid var(--red); color:#ff9b9b; font-size:13px}
-  /* speedometer — lower right */
-  #speedo{position:fixed; z-index:500; right:16px; bottom:calc(96px + env(safe-area-inset-bottom));
-    width:96px; height:96px; border-radius:50%; background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
-    border:2px solid var(--orange); box-shadow:0 0 32px rgba(255,122,24,.3); display:flex; flex-direction:column;
+  /* controls cluster — horizontal, bottom-right above the tray */
+  #controls{position:fixed; z-index:500; right:12px; bottom:calc(98px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:10px}
+  #speedo{width:84px; height:84px; border-radius:50%; flex:0 0 auto;
+    background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
+    border:2px solid var(--orange); box-shadow:0 0 28px rgba(255,122,24,.3); display:flex; flex-direction:column;
     align-items:center; justify-content:center}
-  #speedo .big{font-size:30px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
-  #speedo .sm{font-size:10px; color:var(--muted); letter-spacing:1px}
-  /* recenter — sits above the speedo */
-  #recenter{position:fixed; z-index:500; right:16px; bottom:calc(204px + env(safe-area-inset-bottom));
-    width:48px; height:48px; border-radius:50%; background:rgba(22,17,13,.94); border:1px solid var(--orange);
+  #speedo .big{font-size:26px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
+  #speedo .sm{font-size:9px; color:var(--muted); letter-spacing:1px}
+  #recenter{width:46px; height:46px; border-radius:50%; flex:0 0 auto;
+    background:rgba(22,17,13,.94); border:1px solid var(--orange);
     color:var(--orange-br); display:flex; align-items:center; justify-content:center; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.5)}
   #recenter.active{background:linear-gradient(90deg,var(--orange),var(--orange-br)); color:#1a0d02}
-  /* zoom pill — vertical, above recenter */
-  #zoompill{position:fixed; z-index:500; right:16px; bottom:calc(262px + env(safe-area-inset-bottom));
-    width:48px; background:rgba(22,17,13,.94); border:1px solid var(--orange); border-radius:24px;
-    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.5)}
-  #zoompill button{width:48px; height:46px; background:transparent; border:none; color:var(--orange-br);
+  #zoompill{flex:0 0 auto; display:flex; flex-direction:row;
+    background:rgba(22,17,13,.94); border:1px solid var(--orange); border-radius:23px;
+    overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  #zoompill button{width:42px; height:46px; background:transparent; border:none; color:var(--orange-br);
     font-size:24px; font-weight:800; line-height:1; cursor:pointer}
   #zoompill button:active{background:rgba(255,122,24,.22)}
-  #zoomin{border-bottom:1px solid var(--line)}
+  #zoomin{border-right:1px solid var(--line)}
   /* convoy tray */
   #tray{position:fixed; z-index:500; left:0; right:0; bottom:0;
     padding:10px 12px calc(12px + env(safe-area-inset-bottom));
@@ -208,16 +208,18 @@
   <button class="iconbtn" id="gear">⚙</button>
   <button class="iconbtn" id="leave">Leave</button>
 </div>
-<div id="zoompill" class="hidden">
-  <button id="zoomin" title="Zoom in">+</button>
-  <button id="zoomout" title="Zoom out">−</button>
+<div id="controls" class="hidden">
+  <div id="zoompill">
+    <button id="zoomin" title="Zoom in">+</button>
+    <button id="zoomout" title="Zoom out">−</button>
+  </div>
+  <button id="recenter" title="Re-center on me">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+  </button>
+  <div id="speedo"><div class="big" id="bigspd">0</div><div class="sm" id="speedounit">KM/H</div></div>
 </div>
-<button id="recenter" class="hidden" title="Re-center on me">
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-    <circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
-    <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
-</button>
-<div id="speedo" class="hidden"><div class="big" id="bigspd">0</div><div class="sm" id="speedounit">KM/H</div></div>
 <div id="tray" class="hidden"></div>
 
 <!-- ============ SETTINGS ============ -->
@@ -292,7 +294,7 @@ const MAP_STYLES = {
 };
 
 let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
-let map, tileLayer, watchId, markers = {}, players = {}, roomRef, myRef;
+let map, tileLayer, watchId, markers = {}, players = {}, roomRef, myRef, animMap = {};
 let lastLatLng = null, myHeading = null, wakeLock = null;
 let followMe = settings.follow, resumeT = null;
 
@@ -374,7 +376,7 @@ async function start(code){
 /* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["topfade","hud","speedo","tray","roomtag","recenter","zoompill"].forEach(i=>$(i).classList.remove("hidden"));
+  ["topfade","hud","tray","roomtag","controls"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
   map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5}).setView([13.7563,100.5018], 15); // Bangkok default
   setMapStyle(settings.mapStyle);
@@ -411,16 +413,34 @@ function esc(s){ return String(s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","
 
 function render(data){
   players = data;
-  Object.keys(markers).forEach(k=>{ if(!data[k]){ map.removeLayer(markers[k]); delete markers[k]; }});
+  Object.keys(markers).forEach(k=>{ if(!data[k]){ map.removeLayer(markers[k]); delete markers[k]; delete animMap[k]; }});
   Object.entries(data).forEach(([k,p])=>{
     if(typeof p.lat!=="number"||typeof p.lng!=="number") return;
-    const ll=[p.lat,p.lng], isMe=k===uid;
-    if(markers[k]){ markers[k].setLatLng(ll).setIcon(icon(p,isMe)); }
-    else { markers[k]=L.marker(ll,{icon:icon(p,isMe)}).addTo(map); }
+    const isMe=k===uid;
+    if(markers[k]){ markers[k].setIcon(icon(p,isMe)); glideTo(k, p.lat, p.lng); }
+    else { markers[k]=L.marker([p.lat,p.lng],{icon:icon(p,isMe)}).addTo(map); }
   });
   drawTray(data);
   $("hudcount").textContent = Object.keys(data).length || 1;
 }
+
+/* ---- smooth ping motion: interpolate markers between updates ---- */
+function glideTo(k, lat, lng){
+  const cur = markers[k] ? markers[k].getLatLng() : {lat,lng};
+  animMap[k] = { fromLat:cur.lat, fromLng:cur.lng, toLat:lat, toLng:lng, t0:performance.now(), dur:1000 };
+}
+function animLoop(now){
+  for(const k in animMap){
+    if(!markers[k]){ delete animMap[k]; continue; }
+    const a=animMap[k];
+    let p=(now-a.t0)/a.dur; if(p>1)p=1;
+    const e=p<.5 ? 2*p*p : -1+(4-2*p)*p; // easeInOut for natural glide
+    markers[k].setLatLng([ a.fromLat+(a.toLat-a.fromLat)*e, a.fromLng+(a.toLng-a.fromLng)*e ]);
+    if(p>=1) delete animMap[k];
+  }
+  requestAnimationFrame(animLoop);
+}
+requestAnimationFrame(animLoop);
 
 function drawTray(data){
   const tray=$("tray"); tray.innerHTML="";
@@ -461,7 +481,7 @@ function startTracking(){
     if(myHeading!=null) data.heading = Math.round(myHeading);
     if(me.model) data.model = me.model;
     if(CONFIGURED && myRef){ myRef.set(data); } else { players[uid]=data; render(players); moveDemo(); }
-    if(followMe) map.setView([lat,lng], map.getZoom()<14?16:map.getZoom());
+    if(followMe){ const z=map.getZoom()<14?16:map.getZoom(); map.setView([lat,lng], z, {animate:true, duration:1, easeLinearity:1}); }
   }, err=>{ console.warn(err); alert("Location permission is needed. Enable it in your browser settings."); },
   { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
 }
