@@ -14,7 +14,7 @@
     --bg:#0a0a0b; --panel:#16110d; --line:#2b1c10;
     --orange:#ff7a18; --orange-br:#ff9a3c; --red:#ff2d2d; --red-deep:#e10600;
     --amber:#ffb454; --text:#f6ece2; --muted:#9a897a;
-    --ctrlw:252px; /* width reserved at bottom-right for the controls cluster */
+    --ctrlw:160px; /* width reserved at bottom-right for the controls (landscape horizontal list) */
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -99,27 +99,40 @@
     color:var(--orange-br); border-radius:14px; padding:9px 12px; font-weight:700; cursor:pointer; font-size:15px}
   #gear{margin-left:auto}
   #leave{background:rgba(225,6,0,.15); border:1px solid var(--red); color:#ff9b9b; font-size:13px}
-  /* controls cluster — horizontal, docked in the bottom-right corner */
-  #controls{position:fixed; z-index:600; right:12px; bottom:calc(12px + env(safe-area-inset-bottom));
-    display:flex; align-items:center; gap:10px}
-  #speedo{width:84px; height:84px; border-radius:50%; flex:0 0 auto;
+  /* nav controls (zoom + recenter) — vertical stack, bottom-right (left of speedo) */
+  #controls{position:fixed; z-index:600; right:106px; bottom:calc(12px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center; gap:10px}
+  /* speedometer — bottom-right corner */
+  #speedo{position:fixed; z-index:600; right:12px; bottom:calc(12px + env(safe-area-inset-bottom));
+    width:84px; height:84px; border-radius:50%;
     background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
     border:2px solid var(--orange); box-shadow:0 0 28px rgba(255,122,24,.3); display:flex; flex-direction:column;
     align-items:center; justify-content:center}
   #speedo .big{font-size:26px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
   #speedo .sm{font-size:9px; color:var(--muted); letter-spacing:1px}
-  #recenter{width:46px; height:46px; border-radius:50%; flex:0 0 auto;
+  #recenter{width:46px; height:46px; border-radius:50%;
     background:rgba(22,17,13,.94); border:1px solid var(--orange);
     color:var(--orange-br); display:flex; align-items:center; justify-content:center; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.5)}
   #recenter.active{background:linear-gradient(90deg,var(--orange),var(--orange-br)); color:#1a0d02}
-  #zoompill{flex:0 0 auto; display:flex; flex-direction:row;
+  #zoompill{display:flex; flex-direction:column;
     background:rgba(22,17,13,.94); border:1px solid var(--orange); border-radius:23px;
     overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.5)}
-  #zoompill button{width:42px; height:46px; background:transparent; border:none; color:var(--orange-br);
+  #zoompill button{width:46px; height:44px; background:transparent; border:none; color:var(--orange-br);
     font-size:24px; font-weight:800; line-height:1; cursor:pointer}
   #zoompill button:active{background:rgba(255,122,24,.22)}
-  #zoomin{border-right:1px solid var(--line)}
+  #zoomin{border-bottom:1px solid var(--line)}
+  /* ===== PHONE PORTRAIT: vertical driver list + speed at bottom ===== */
+  @media (orientation: portrait){
+    #tray{ top:calc(96px + env(safe-area-inset-top)); bottom:auto; left:12px; right:auto;
+      width:170px; max-height:264px; flex-direction:column; gap:8px;
+      overflow-x:hidden; overflow-y:auto; padding:2px; background:none;
+      -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 74px), transparent);
+      mask-image:linear-gradient(to bottom, #000 calc(100% - 74px), transparent)}
+    .driver{min-width:0; width:100%}
+    #speedo{right:auto; left:12px}
+    #controls{right:12px}
+  }
   /* convoy tray */
   #tray{position:fixed; z-index:500; left:0; right:0; bottom:0;
     padding:10px var(--ctrlw) calc(12px + env(safe-area-inset-bottom)) 12px;
@@ -220,8 +233,8 @@
       <circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
       <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
   </button>
-  <div id="speedo"><div class="big" id="bigspd">0</div><div class="sm" id="speedounit">KM/H</div></div>
 </div>
+<div id="speedo" class="hidden"><div class="big" id="bigspd">0</div><div class="sm" id="speedounit">KM/H</div></div>
 <div id="tray" class="hidden"></div>
 
 <!-- ============ SETTINGS ============ -->
@@ -378,7 +391,7 @@ async function start(code){
 /* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["topfade","hud","tray","roomtag","controls"].forEach(i=>$(i).classList.remove("hidden"));
+  ["topfade","hud","tray","roomtag","controls","speedo"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
   map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5}).setView([13.7563,100.5018], 15); // Bangkok default
   setMapStyle(settings.mapStyle);
