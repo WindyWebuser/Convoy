@@ -122,13 +122,13 @@
   #speedo .big{font-size:26px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
   #speedo .sm{font-size:9px; color:var(--muted); letter-spacing:1px}
   /* convoy tray */
-  /* driver list — bottom-left, stacks upward ~3.5 cards, fades at the top, scroll for more */
+  /* driver list — bottom-left, stacks upward; fades + scrolls only when 4+ drivers */
   #tray{position:fixed; z-index:500; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); top:auto;
-    width:172px; max-height:268px; display:flex; flex-direction:column-reverse; gap:8px;
-    overflow-y:auto; overflow-x:hidden; padding:2px;
-    -webkit-mask-image:linear-gradient(to top, #000 calc(100% - 74px), transparent);
+    width:auto; max-width:64vw; max-height:256px; display:flex; flex-direction:column-reverse;
+    align-items:flex-start; gap:8px; overflow-y:auto; overflow-x:hidden; padding:2px}
+  #tray.scrollfade{ -webkit-mask-image:linear-gradient(to top, #000 calc(100% - 74px), transparent);
     mask-image:linear-gradient(to top, #000 calc(100% - 74px), transparent)}
-  .driver{flex:0 0 auto; width:100%; box-sizing:border-box; background:rgba(22,17,13,.94); border:1px solid var(--line);
+  .driver{flex:0 0 auto; min-width:120px; box-sizing:border-box; background:rgba(22,17,13,.94); border:1px solid var(--line);
     border-radius:14px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; cursor:pointer}
   .driver.me{border-color:var(--orange)}
   .driver .top{display:flex; align-items:center; gap:6px}
@@ -450,7 +450,11 @@ requestAnimationFrame(animLoop);
 
 function drawTray(data){
   const tray=$("tray"); tray.innerHTML="";
-  Object.entries(data).sort((a,b)=>(b[1].speed||0)-(a[1].speed||0)).forEach(([k,p])=>{
+  const entries=Object.entries(data).sort((a,b)=>{
+    if(a[0]===uid) return -1; if(b[0]===uid) return 1;   // keep my own card pinned at the bottom
+    return (b[1].speed||0)-(a[1].speed||0);
+  });
+  entries.forEach(([k,p])=>{
     const isMe=k===uid, stale=Date.now()-(p.ts||0)>STALE_MS, sp=dispSpeed(p.speed||0);
     const d=document.createElement("div"); d.className="driver"+(isMe?" me":"");
     d.innerHTML=`<div class="top"><span class="em">${p.emoji||"🚗"}</span>
@@ -460,6 +464,7 @@ function drawTray(data){
     d.onclick=()=>{ if(typeof p.lat==="number"){ if(isMe) focusMe(); else { followMe=false; courseUp=false; setBearingSafe(0); clearTimeout(resumeT); map.panTo([p.lat,p.lng]); updateRecenterBtn(); } } };
     tray.appendChild(d);
   });
+  tray.classList.toggle("scrollfade", entries.length>3);
 }
 
 /* geolocation + heading */
