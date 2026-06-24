@@ -53,8 +53,9 @@
     padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px; line-height:1.5}
   /* ---------- Map ---------- */
   #map{position:fixed; inset:0; z-index:1; background:#000}
-  #map[data-filter="night"]    .leaflet-tile-pane{filter:brightness(1.25) contrast(1.45) sepia(1) saturate(6) hue-rotate(-12deg)}
-  #map[data-filter="blackout"] .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) brightness(.95) contrast(.92) saturate(.7)}
+  #map[data-filter="invert"]   .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) brightness(.95) contrast(.92) saturate(.7)}
+  #map[data-filter="dark"]     .leaflet-tile-pane{filter:brightness(1.12) contrast(1.18) saturate(.8)}
+  #map[data-filter="satnight"] .leaflet-tile-pane{filter:brightness(.55) contrast(1.12) saturate(.85)}
   /* ---- driver pin: emoji circle + heading arrow + speed ---- */
   .pin{position:relative; width:60px; height:60px; opacity:1}
   .pin .ring{position:absolute; top:9px; left:9px; width:42px; height:42px; border-radius:50%;
@@ -94,6 +95,14 @@
     color:var(--orange-br); display:flex; align-items:center; justify-content:center; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.5)}
   #recenter.active{background:linear-gradient(90deg,var(--orange),var(--orange-br)); color:#1a0d02}
+  /* zoom pill — vertical, above recenter */
+  #zoompill{position:fixed; z-index:500; right:16px; bottom:calc(262px + env(safe-area-inset-bottom));
+    width:48px; background:rgba(22,17,13,.94); border:1px solid var(--orange); border-radius:24px;
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  #zoompill button{width:48px; height:46px; background:transparent; border:none; color:var(--orange-br);
+    font-size:24px; font-weight:800; line-height:1; cursor:pointer}
+  #zoompill button:active{background:rgba(255,122,24,.22)}
+  #zoomin{border-bottom:1px solid var(--line)}
   /* convoy tray */
   #tray{position:fixed; z-index:500; left:0; right:0; bottom:0;
     padding:10px 12px calc(12px + env(safe-area-inset-bottom));
@@ -122,8 +131,10 @@
   .sheet h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--orange)}
   .seth{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:16px 2px 8px}
   .seg{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-  .seg button{padding:11px; border-radius:11px; background:#0d0b09; border:1px solid var(--line);
+  .seg.three{grid-template-columns:1fr 1fr 1fr; margin-top:8px}
+  .seg button{padding:11px 6px; border-radius:11px; background:#0d0b09; border:1px solid var(--line);
     color:var(--muted); font-weight:700; font-size:13px; cursor:pointer}
+  .seg.three button{font-size:12px}
   .seg button.on{color:#1a0d02; background:linear-gradient(90deg,var(--orange),var(--orange-br)); border-color:transparent}
   .toggle{display:flex; align-items:center; justify-content:space-between; padding:12px 2px; border-top:1px solid var(--line)}
   .toggle:first-of-type{border-top:none}
@@ -172,6 +183,10 @@
   <button class="iconbtn" id="gear">⚙</button>
   <button class="iconbtn" id="leave">Leave</button>
 </div>
+<div id="zoompill" class="hidden">
+  <button id="zoomin" title="Zoom in">+</button>
+  <button id="zoomout" title="Zoom out">−</button>
+</div>
 <button id="recenter" class="hidden" title="Re-center on me">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
     <circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
@@ -185,11 +200,14 @@
   <div class="sheet">
     <h2><span class="dot"></span>Settings</h2>
     <div class="seth">Map style</div>
-    <div class="seg" id="styleSeg">
-      <button data-style="night">🟧 Night</button>
-      <button data-style="blackout">🌙 Blackout</button>
+    <div class="seg">
+      <button data-style="night">🌙 Night</button>
+      <button data-style="blackout">🕯️ Blackout</button>
+    </div>
+    <div class="seg three">
       <button data-style="day">☀️ Day</button>
-      <button data-style="satellite">🛰️ Satellite</button>
+      <button data-style="satellite">🛰️ Sat</button>
+      <button data-style="sattint">🌃 Sat Tint</button>
     </div>
     <div class="seth">Driving</div>
     <div class="toggle">
@@ -235,16 +253,17 @@ const STALE_MS = 12000, FOLLOW_RESUME_MS = 10000;
 const $ = id => document.getElementById(id);
 
 /* settings */
-const DEF = { mapStyle:"night", follow:true, units:"kmh", spdLabels:true, wake:false };
+const DEF = { mapStyle:"night", follow:true, units:"kmh", spdLabels:true, wake:true };
 let settings = loadSettings();
 function loadSettings(){ try{ return Object.assign({}, DEF, JSON.parse(localStorage.getItem("convoySettings")||"{}")); }catch(e){ return {...DEF}; } }
 function saveSettings(){ try{ localStorage.setItem("convoySettings", JSON.stringify(settings)); }catch(e){} }
 
 const MAP_STYLES = {
-  night:     { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"night",    max:20 },
-  blackout:  { url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                       sub:"abc",  attr:"© OpenStreetMap",         filter:"blackout", max:19 },
+  night:     { url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                       sub:"abc",  attr:"© OpenStreetMap",         filter:"invert",   max:19 },
+  blackout:  { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"dark",     max:20 },
   day:       { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",     max:20 },
-  satellite: { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"none", max:19 }
+  satellite: { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"none",     max:19 },
+  sattint:   { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"satnight", max:19 }
 };
 
 let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
@@ -284,10 +303,9 @@ async function start(code){
 /* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["hud","speedo","tray","roomtag","recenter"].forEach(i=>$(i).classList.remove("hidden"));
+  ["hud","speedo","tray","roomtag","recenter","zoompill"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
-  map = L.map("map",{zoomControl:false, attributionControl:true}).setView([13.7563,100.5018], 15); // Bangkok default
-  L.control.zoom({position:"bottomleft"}).addTo(map);
+  map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5}).setView([13.7563,100.5018], 15); // Bangkok default
   setMapStyle(settings.mapStyle);
   const c = map.getContainer();
   ["touchstart","pointerdown","wheel"].forEach(ev=> c.addEventListener(ev, pauseFollow, {passive:true}));
@@ -394,6 +412,8 @@ function recenterNow(){
 }
 function updateRecenterBtn(){ $("recenter").classList.toggle("active", followMe); }
 $("recenter").onclick = recenterNow;
+$("zoomin").onclick  = ()=>{ if(map) map.zoomIn(); };
+$("zoomout").onclick = ()=>{ if(map) map.zoomOut(); };
 
 /* keep screen on */
 async function applyWake(){
@@ -407,13 +427,13 @@ document.addEventListener("visibilitychange", ()=>{ if(settings.wake && document
 $("gear").onclick = ()=> $("settings").classList.add("open");
 $("closeSettings").onclick = ()=> $("settings").classList.remove("open");
 $("settings").addEventListener("click", e=>{ if(e.target.id==="settings") $("settings").classList.remove("open"); });
-document.querySelectorAll("#styleSeg button").forEach(b=> b.onclick=()=>{ setMapStyle(b.dataset.style); syncSettingsUI(); });
+document.querySelectorAll("[data-style]").forEach(b=> b.onclick=()=>{ setMapStyle(b.dataset.style); syncSettingsUI(); });
 document.querySelectorAll("#unitSeg button").forEach(b=> b.onclick=()=>{ settings.units=b.dataset.unit; saveSettings(); syncSettingsUI(); render(players); });
 $("swFollow").onclick = ()=>{ settings.follow=!settings.follow; followMe=settings.follow; saveSettings(); syncSettingsUI(); updateRecenterBtn(); if(followMe&&lastLatLng)map.panTo(lastLatLng); };
 $("swLabels").onclick = ()=>{ settings.spdLabels=!settings.spdLabels; saveSettings(); syncSettingsUI(); render(players); };
 $("swWake").onclick   = ()=>{ settings.wake=!settings.wake; saveSettings(); syncSettingsUI(); applyWake(); };
 function syncSettingsUI(){
-  document.querySelectorAll("#styleSeg button").forEach(b=> b.classList.toggle("on", b.dataset.style===settings.mapStyle));
+  document.querySelectorAll("[data-style]").forEach(b=> b.classList.toggle("on", b.dataset.style===settings.mapStyle));
   document.querySelectorAll("#unitSeg button").forEach(b=> b.classList.toggle("on", b.dataset.unit===settings.units));
   $("swFollow").classList.toggle("on", settings.follow);
   $("swLabels").classList.toggle("on", settings.spdLabels);
