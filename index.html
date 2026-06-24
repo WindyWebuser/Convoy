@@ -53,9 +53,8 @@
     padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px; line-height:1.5}
   /* ---------- Map ---------- */
   #map{position:fixed; inset:0; z-index:1; background:#000}
-  #map[data-filter="night"]    .leaflet-tile-pane{filter:brightness(1.18) contrast(1.38) saturate(.62) hue-rotate(-6deg)}
-  #map[data-filter="blackout"] .leaflet-tile-pane{filter:brightness(.6)  contrast(1.18) saturate(.45)}
-  #map[data-filter="terrain"]  .leaflet-tile-pane{filter:brightness(.62) contrast(1.05) saturate(.85) sepia(.18) hue-rotate(-12deg)}
+  #map[data-filter="night"]    .leaflet-tile-pane{filter:brightness(1.25) contrast(1.45) sepia(1) saturate(6) hue-rotate(-12deg)}
+  #map[data-filter="blackout"] .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) brightness(.95) contrast(.92) saturate(.7)}
   /* ---- driver pin: emoji circle + heading arrow + speed ---- */
   .pin{position:relative; width:60px; height:60px; opacity:1}
   .pin .ring{position:absolute; top:9px; left:9px; width:42px; height:42px; border-radius:50%;
@@ -187,10 +186,10 @@
     <h2><span class="dot"></span>Settings</h2>
     <div class="seth">Map style</div>
     <div class="seg" id="styleSeg">
-      <button data-style="night">🌃 Night</button>
-      <button data-style="blackout">🏁 Blackout</button>
+      <button data-style="night">🟧 Night</button>
+      <button data-style="blackout">🌙 Blackout</button>
       <button data-style="day">☀️ Day</button>
-      <button data-style="terrain">⛰️ Terrain</button>
+      <button data-style="satellite">🛰️ Satellite</button>
     </div>
     <div class="seth">Driving</div>
     <div class="toggle">
@@ -242,10 +241,10 @@ function loadSettings(){ try{ return Object.assign({}, DEF, JSON.parse(localStor
 function saveSettings(){ try{ localStorage.setItem("convoySettings", JSON.stringify(settings)); }catch(e){} }
 
 const MAP_STYLES = {
-  night:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",      sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"night",    max:20 },
-  blackout: { url:"https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"blackout", max:20 },
-  day:      { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none", max:20 },
-  terrain:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                   sub:"abc",  attr:"© OpenTopoMap (CC-BY-SA)", filter:"terrain", max:17 }
+  night:     { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"night",    max:20 },
+  blackout:  { url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                       sub:"abc",  attr:"© OpenStreetMap",         filter:"blackout", max:19 },
+  day:       { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",     max:20 },
+  satellite: { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"none", max:19 }
 };
 
 let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
