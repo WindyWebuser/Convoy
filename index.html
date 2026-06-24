@@ -65,7 +65,6 @@
   /* ---------- Map ---------- */
   #map{position:fixed; inset:0; z-index:1; background:#000}
   #map[data-filter="invert"]   .leaflet-tile-pane{filter:invert(1) hue-rotate(190deg) brightness(.95) contrast(.92) saturate(.7)}
-  #map[data-filter="dark"]     .leaflet-tile-pane{filter:brightness(1.12) contrast(1.18) saturate(.8)}
   #map[data-filter="satnight"] .leaflet-tile-pane{filter:brightness(.55) contrast(1.12) saturate(.85)}
   /* ---- driver pin: emoji circle + heading arrow + speed ---- */
   .pin{position:relative; width:60px; height:60px; opacity:1}
@@ -287,7 +286,7 @@ function saveSettings(){ try{ localStorage.setItem("convoySettings", JSON.string
 
 const MAP_STYLES = {
   night:     { url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                       sub:"abc",  attr:"© OpenStreetMap",         filter:"invert",   max:19 },
-  blackout:  { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"dark",     max:20 },
+  blackout:  { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",            sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",     max:20 },
   day:       { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",     max:20 },
   satellite: { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"none",     max:19 },
   sattint:   { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", sub:"", attr:"Imagery © Esri", filter:"satnight", max:19 }
