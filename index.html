@@ -114,6 +114,7 @@
     color:var(--orange-br); display:flex; align-items:center; justify-content:center; cursor:pointer;
     box-shadow:0 6px 18px rgba(0,0,0,.5)}
   #recenter.active{background:linear-gradient(90deg,var(--orange),var(--orange-br)); color:#1a0d02}
+  #recenter.course{background:linear-gradient(90deg,var(--red-deep),var(--red)); color:#fff; border-color:var(--red)}
   #speedo{width:84px; height:84px; border-radius:50%;
     background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
     border:2px solid var(--orange); box-shadow:0 0 28px rgba(255,122,24,.3); display:flex; flex-direction:column;
@@ -121,12 +122,12 @@
   #speedo .big{font-size:26px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
   #speedo .sm{font-size:9px; color:var(--muted); letter-spacing:1px}
   /* convoy tray */
-  /* driver list — vertical stack, top-left, ~3.5 cards then fade + scroll */
-  #tray{position:fixed; z-index:500; top:calc(96px + env(safe-area-inset-top)); left:12px;
-    width:172px; max-height:268px; display:flex; flex-direction:column; gap:8px;
+  /* driver list — bottom-left, stacks upward ~3.5 cards, fades at the top, scroll for more */
+  #tray{position:fixed; z-index:500; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); top:auto;
+    width:172px; max-height:268px; display:flex; flex-direction:column-reverse; gap:8px;
     overflow-y:auto; overflow-x:hidden; padding:2px;
-    -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 74px), transparent);
-    mask-image:linear-gradient(to bottom, #000 calc(100% - 74px), transparent)}
+    -webkit-mask-image:linear-gradient(to top, #000 calc(100% - 74px), transparent);
+    mask-image:linear-gradient(to top, #000 calc(100% - 74px), transparent)}
   .driver{flex:0 0 auto; width:100%; box-sizing:border-box; background:rgba(22,17,13,.94); border:1px solid var(--line);
     border-radius:14px; padding:9px 11px; display:flex; flex-direction:column; gap:2px; cursor:pointer}
   .driver.me{border-color:var(--orange)}
@@ -261,6 +262,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -298,7 +300,7 @@ const MAP_STYLES = {
 let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
 let map, tileLayer, watchId, markers = {}, players = {}, roomRef, myRef, animMap = {};
 let lastLatLng = null, myHeading = null, wakeLock = null;
-let followMe = settings.follow, resumeT = null;
+let followMe = settings.follow, resumeT = null, courseUp = false;
 
 /* lobby */
 const emojiBox = $("emojiPick");
@@ -380,7 +382,8 @@ function enterMap(){
   $("lobby").classList.add("hidden");
   ["topfade","hud","tray","roomtag","controls"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
-  map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5}).setView([13.7563,100.5018], 15); // Bangkok default
+  map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5,
+    rotate:true, touchRotate:false, bearing:0}).setView([13.7563,100.5018], 15); // Bangkok default
   setMapStyle(settings.mapStyle);
   const c = map.getContainer();
   ["touchstart","pointerdown","wheel"].forEach(ev=> c.addEventListener(ev, pauseFollow, {passive:true}));
@@ -401,10 +404,11 @@ function icon(p, isMe){
   const stale = Date.now() - (p.ts||0) > STALE_MS;
   const sp = dispSpeed(p.speed||0);
   const h = (typeof p.heading==="number") ? p.heading : null;
+  const arr = h!=null ? ((courseUp && myHeading!=null) ? (h - myHeading) : h) : null;
   return L.divIcon({
     className:"", iconSize:[60,60], iconAnchor:[30,30],
     html:`<div class="pin ${isMe?'me':''}" style="opacity:${stale?.45:1}">
-            ${h!=null?`<div class="dir" style="transform:rotate(${h}deg)"><div class="arrow"></div></div>`:""}
+            ${arr!=null?`<div class="dir" style="transform:rotate(${arr}deg)"><div class="arrow"></div></div>`:""}
             <div class="ring">${p.emoji||"🚗"}</div>
             <div class="nm">${esc(p.name||"Driver")}</div>
             ${settings.spdLabels?`<div class="spd">${sp.v} ${sp.u}</div>`:""}
@@ -453,7 +457,7 @@ function drawTray(data){
         <span class="nm">${esc(p.name||"Driver")}${isMe?" (you)":""}</span></div>
       ${p.model?`<div class="md">${esc(p.model)}</div>`:""}
       <span class="sp ${stale?'stale':''}">${sp.v}<small> ${sp.u}</small></span>`;
-    d.onclick=()=>{ if(typeof p.lat==="number"){ if(isMe) recenterNow(); else { followMe=false; clearTimeout(resumeT); map.panTo([p.lat,p.lng]); updateRecenterBtn(); } } };
+    d.onclick=()=>{ if(typeof p.lat==="number"){ if(isMe) focusMe(); else { followMe=false; courseUp=false; setBearingSafe(0); clearTimeout(resumeT); map.panTo([p.lat,p.lng]); updateRecenterBtn(); } } };
     tray.appendChild(d);
   });
 }
@@ -483,7 +487,7 @@ function startTracking(){
     if(myHeading!=null) data.heading = Math.round(myHeading);
     if(me.model) data.model = me.model;
     if(CONFIGURED && myRef){ myRef.set(data); } else { players[uid]=data; render(players); moveDemo(); }
-    if(followMe){ const z=map.getZoom()<14?16:map.getZoom(); map.setView([lat,lng], z, {animate:true, duration:1, easeLinearity:1}); }
+    if(followMe){ const z=map.getZoom()<14?16:map.getZoom(); map.setView([lat,lng], z, {animate:true, duration:1, easeLinearity:1}); if(courseUp && myHeading!=null) setBearingSafe(myHeading); }
   }, err=>{ console.warn(err); alert("Location permission is needed. Enable it in your browser settings."); },
   { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
 }
@@ -495,19 +499,26 @@ function bearingDeg(la1,lo1,la2,lo2){const r=x=>x*Math.PI/180;
   const x=Math.cos(r(la1))*Math.sin(r(la2))-Math.sin(r(la1))*Math.cos(r(la2))*Math.cos(r(lo2-lo1));
   return (Math.atan2(y,x)*180/Math.PI+360)%360;}
 
-/* smart follow */
+/* smart follow + heading-up */
+function setBearingSafe(b){ if(map && map.setBearing) map.setBearing(b); }
+function centerNow(){
+  if(lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(),16), {animate:true, duration:.5});
+  if(courseUp && myHeading!=null) setBearingSafe(myHeading);
+}
 function pauseFollow(){
-  followMe=false; clearTimeout(resumeT); updateRecenterBtn();
+  followMe=false; courseUp=false; setBearingSafe(0); clearTimeout(resumeT); updateRecenterBtn(); if(map) render(players);
   if(settings.follow){ resumeT=setTimeout(()=>{ followMe=true; updateRecenterBtn(); if(lastLatLng) map.setView(lastLatLng, map.getZoom()); }, FOLLOW_RESUME_MS); }
 }
-function recenterNow(){
-  clearTimeout(resumeT);
-  if(settings.follow) followMe=true;
-  if(lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(),16));
-  updateRecenterBtn();
+/* button cycles: off -> follow (north up) -> course up -> north up -> course up ... */
+function recenterCycle(){
+  if(!followMe){ followMe=true; courseUp=false; setBearingSafe(0); }
+  else if(!courseUp){ courseUp=true; }
+  else { courseUp=false; setBearingSafe(0); }
+  clearTimeout(resumeT); centerNow(); updateRecenterBtn(); render(players);
 }
-function updateRecenterBtn(){ $("recenter").classList.toggle("active", followMe); }
-$("recenter").onclick = recenterNow;
+function focusMe(){ followMe=true; courseUp=false; setBearingSafe(0); clearTimeout(resumeT); centerNow(); updateRecenterBtn(); render(players); }
+function updateRecenterBtn(){ const b=$("recenter"); b.classList.toggle("active", followMe && !courseUp); b.classList.toggle("course", courseUp); }
+$("recenter").onclick = recenterCycle;
 $("zoomin").onclick  = ()=>{ if(map) map.zoomIn(); };
 $("zoomout").onclick = ()=>{ if(map) map.zoomOut(); };
 
