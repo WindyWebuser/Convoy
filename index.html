@@ -67,7 +67,10 @@
     width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:12px solid var(--red);
     filter:drop-shadow(0 0 4px rgba(255,45,45,.7))}
   .pin.me .arrow{border-bottom-color:var(--orange); filter:drop-shadow(0 0 4px rgba(255,122,24,.8))}
-  .pin .spd{position:absolute; top:53px; left:50%; transform:translateX(-50%); white-space:nowrap;
+  .pin .nm{position:absolute; top:53px; left:50%; transform:translateX(-50%); white-space:nowrap;
+    font-size:10px; font-weight:800; color:#fff; text-shadow:0 1px 3px #000, 0 0 2px #000}
+  .pin.me .nm{color:var(--orange-br)}
+  .pin .spd{position:absolute; top:65px; left:50%; transform:translateX(-50%); white-space:nowrap;
     font-size:10px; font-weight:800; color:var(--amber); text-shadow:0 1px 3px #000, 0 0 2px #000}
   /* HUD */
   #hud{position:fixed; z-index:500; left:0; right:0; top:0; padding:10px 12px;
@@ -114,6 +117,7 @@
   .driver .top{display:flex; align-items:center; gap:6px}
   .driver .em{font-size:20px}
   .driver .nm{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px}
+  .driver .md{font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px; margin-top:-1px}
   .driver .sp{font-size:13px; font-weight:800; color:var(--amber); font-variant-numeric:tabular-nums}
   .driver .sp small{color:var(--muted); font-weight:600; font-size:9px}
   .driver .stale{color:var(--muted)}
@@ -161,8 +165,12 @@
     <div id="cfgwarn" class="config-warn hidden">⚠️ Firebase not configured — running in <b>solo demo mode</b>.</div>
     <div class="label">Your avatar</div>
     <div class="emojis" id="emojiPick"></div>
+    <input id="customEmoji" maxlength="16" autocomplete="off" aria-hidden="true"
+      style="position:absolute; left:-9999px; width:2em; height:1px; opacity:0">
     <div class="label">Your name</div>
     <input id="name" maxlength="12" placeholder="e.g. Maverick" autocomplete="off">
+    <div class="label">Car model (optional)</div>
+    <input id="model" maxlength="20" placeholder="e.g. GR Yaris" autocomplete="off">
     <div class="label">Convoy code</div>
     <input id="code" maxlength="5" placeholder="ABCDE" autocomplete="off">
     <div class="row" style="margin-top:12px">
@@ -248,7 +256,7 @@ const firebaseConfig = {
 };
 /* =========================================================== */
 const CONFIGURED = !!firebaseConfig.databaseURL;
-const EMOJIS = ["🏎️","🚗","🚙","🛻","🚐","🏍️","🚓","🚕","🚌","🛵","🚜","🦊","🐺","🐉","⚡","🔥"];
+const EMOJIS = ["🏎️","🚗","🚀","🛸","👽","🤖","💀","👻","🐉","🦄","🐺","🦊","🐢","🐌","⚡","🔥","🎯","🦅"];
 const STALE_MS = 12000, FOLLOW_RESUME_MS = 10000;
 const $ = id => document.getElementById(id);
 
@@ -273,9 +281,21 @@ let followMe = settings.follow, resumeT = null;
 
 /* lobby */
 const emojiBox = $("emojiPick");
+function selectTile(tile){ [...emojiBox.children].forEach(c=>c.classList.remove("sel")); tile.classList.add("sel"); }
 EMOJIS.forEach((e,i)=>{ const b=document.createElement("button"); b.textContent=e; if(i===0)b.classList.add("sel");
-  b.onclick=()=>{ [...emojiBox.children].forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); me.emoji=e; };
+  b.onclick=()=>{ selectTile(b); me.emoji=e; };
   emojiBox.appendChild(b); });
+// custom emoji tile — opens the phone's emoji keyboard to pick any emoji
+const customTile=document.createElement("button");
+customTile.id="customTile"; customTile.textContent="➕"; customTile.title="Pick any emoji";
+customTile.onclick=()=>{ const ce=$("customEmoji"); ce.value=""; ce.focus(); };
+emojiBox.appendChild(customTile);
+$("customEmoji").addEventListener("input", e=>{
+  const v=e.target.value.trim();
+  if(!v) return;
+  me.emoji=v; customTile.textContent=v; selectTile(customTile);
+  e.target.value=""; e.target.blur();
+});
 $("code").addEventListener("input", e=> e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"") );
 if(!CONFIGURED) $("cfgwarn").classList.remove("hidden");
 if(CONFIGURED){ firebase.initializeApp(firebaseConfig); db=firebase.database(); auth=firebase.auth(); }
@@ -287,6 +307,7 @@ $("joinBtn").onclick   = ()=>{ const c=$("code").value.trim(); if(c.length<4) re
 
 async function start(code){
   me.name = ($("name").value.trim() || "Driver").slice(0,12);
+  me.model = ($("model").value.trim() || "").slice(0,20);
   room = code.toUpperCase(); showErr("");
   if(!navigator.geolocation){ return showErr("This device can't share location."); }
   try{
@@ -331,6 +352,7 @@ function icon(p, isMe){
     html:`<div class="pin ${isMe?'me':''}" style="opacity:${stale?.45:1}">
             ${h!=null?`<div class="dir" style="transform:rotate(${h}deg)"><div class="arrow"></div></div>`:""}
             <div class="ring">${p.emoji||"🚗"}</div>
+            <div class="nm">${esc(p.name||"Driver")}</div>
             ${settings.spdLabels?`<div class="spd">${sp.v} ${sp.u}</div>`:""}
           </div>`
   });
@@ -357,6 +379,7 @@ function drawTray(data){
     const d=document.createElement("div"); d.className="driver"+(isMe?" me":"");
     d.innerHTML=`<div class="top"><span class="em">${p.emoji||"🚗"}</span>
         <span class="nm">${esc(p.name||"Driver")}${isMe?" (you)":""}</span></div>
+      ${p.model?`<div class="md">${esc(p.model)}</div>`:""}
       <span class="sp ${stale?'stale':''}">${sp.v}<small> ${sp.u}</small></span>`;
     d.onclick=()=>{ if(typeof p.lat==="number"){ if(isMe) recenterNow(); else { followMe=false; clearTimeout(resumeT); map.panTo([p.lat,p.lng]); updateRecenterBtn(); } } };
     tray.appendChild(d);
@@ -386,6 +409,7 @@ function startTracking(){
 
     const data={ emoji:me.emoji, name:me.name, lat, lng, speed:kmh, ts:Date.now() };
     if(myHeading!=null) data.heading = Math.round(myHeading);
+    if(me.model) data.model = me.model;
     if(CONFIGURED && myRef){ myRef.set(data); } else { players[uid]=data; render(players); moveDemo(); }
     if(followMe) map.setView([lat,lng], map.getZoom()<14?16:map.getZoom());
   }, err=>{ console.warn(err); alert("Location permission is needed. Enable it in your browser settings."); },

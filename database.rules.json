@@ -20,7 +20,8 @@
             "lng":   { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
             "speed": { ".validate": "newData.isNumber() && newData.val() >= 0   && newData.val() <= 400" },
             "name":  { ".validate": "newData.isString() && newData.val().length <= 12" },
-            "emoji": { ".validate": "newData.isString() && newData.val().length <= 8" },
+            "model": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "emoji": { ".validate": "newData.isString() && newData.val().length <= 20" },
             "ts":      { ".validate": "newData.isNumber()" },
             "heading": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 360" },
 
