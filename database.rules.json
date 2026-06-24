@@ -21,7 +21,8 @@
             "speed": { ".validate": "newData.isNumber() && newData.val() >= 0   && newData.val() <= 400" },
             "name":  { ".validate": "newData.isString() && newData.val().length <= 12" },
             "emoji": { ".validate": "newData.isString() && newData.val().length <= 8" },
-            "ts":    { ".validate": "newData.isNumber()" },
+            "ts":      { ".validate": "newData.isNumber()" },
+            "heading": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 360" },
 
             "$other": { ".validate": false }
           }

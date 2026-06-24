@@ -10,25 +10,21 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
   :root{
-    --bg:#0a0a0b; --bg2:#111012; --panel:#16110d; --line:#2b1c10;
+    --bg:#0a0a0b; --panel:#16110d; --line:#2b1c10;
     --orange:#ff7a18; --orange-br:#ff9a3c; --red:#ff2d2d; --red-deep:#e10600;
     --amber:#ffb454; --text:#f6ece2; --muted:#9a897a;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--bg); color:var(--text); overflow:hidden; touch-action:manipulation;
-  }
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); overflow:hidden; touch-action:manipulation;}
   /* ---------- Lobby ---------- */
-  #lobby{
-    position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column;
+  #lobby{position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:18px; padding:24px;
     background:
       radial-gradient(900px 520px at 50% -12%, rgba(255,122,24,.22), transparent 60%),
       radial-gradient(700px 420px at 50% 115%, rgba(225,6,0,.18), transparent 60%),
-      repeating-linear-gradient(45deg, #0a0a0b 0 22px, #0e0c0a 22px 44px);
-  }
+      repeating-linear-gradient(45deg, #0a0a0b 0 22px, #0e0c0a 22px 44px);}
   .logo{font-weight:900; letter-spacing:5px; font-size:36px;
     background:linear-gradient(90deg,var(--orange),var(--red-deep));
     -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -49,7 +45,6 @@
     cursor:pointer; margin-top:12px; color:#1a0d02;
     background:linear-gradient(90deg,var(--orange),var(--orange-br)); box-shadow:0 8px 24px rgba(255,122,24,.35)}
   .btn.ghost{background:transparent; color:var(--orange); border:1px solid var(--orange); box-shadow:none}
-  .btn.red{background:linear-gradient(90deg,var(--red-deep),var(--red)); color:#fff; box-shadow:0 8px 24px rgba(225,6,0,.35)}
   .row{display:flex; gap:10px}
   .row .btn{margin-top:0}
   .err{color:var(--red); font-size:13px; min-height:18px; text-align:center; margin-top:8px}
@@ -58,15 +53,22 @@
     padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px; line-height:1.5}
   /* ---------- Map ---------- */
   #map{position:fixed; inset:0; z-index:1; background:#000}
-  #map[data-filter="invert"] .leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.8) contrast(.92) saturate(.65)}
-  #map[data-filter="darken"] .leaflet-tile-pane{filter:brightness(.55) contrast(1.05) saturate(.85) sepia(.2) hue-rotate(-12deg)}
-  .marker{display:flex; flex-direction:column; align-items:center; transform:translateY(-6px)}
-  .marker .bubble{font-size:26px; line-height:1; filter:drop-shadow(0 0 8px rgba(255,45,45,.5)) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
-  .marker.me .bubble{filter:drop-shadow(0 0 10px rgba(255,122,24,.7)) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
-  .marker .tagname{margin-top:2px; font-size:10px; font-weight:800; color:#fff; padding:1px 6px;
-    border-radius:8px; white-space:nowrap; background:rgba(10,10,11,.88); border:1px solid var(--red)}
-  .marker.me .tagname{border-color:var(--orange); color:var(--orange-br)}
-  .marker .spd{font-size:9px; color:var(--amber); font-weight:800}
+  #map[data-filter="night"]    .leaflet-tile-pane{filter:brightness(1.18) contrast(1.38) saturate(.62) hue-rotate(-6deg)}
+  #map[data-filter="blackout"] .leaflet-tile-pane{filter:brightness(.6)  contrast(1.18) saturate(.45)}
+  #map[data-filter="terrain"]  .leaflet-tile-pane{filter:brightness(.62) contrast(1.05) saturate(.85) sepia(.18) hue-rotate(-12deg)}
+  /* ---- driver pin: emoji circle + heading arrow + speed ---- */
+  .pin{position:relative; width:60px; height:60px; opacity:1}
+  .pin .ring{position:absolute; top:9px; left:9px; width:42px; height:42px; border-radius:50%;
+    background:rgba(12,10,9,.92); border:2px solid var(--red); display:flex; align-items:center; justify-content:center;
+    font-size:22px; box-shadow:0 0 10px rgba(255,45,45,.55), 0 2px 5px rgba(0,0,0,.6)}
+  .pin.me .ring{border-color:var(--orange); box-shadow:0 0 12px rgba(255,122,24,.75), 0 2px 5px rgba(0,0,0,.6)}
+  .pin .dir{position:absolute; inset:0; transition:transform .25s ease-out}
+  .pin .arrow{position:absolute; top:-3px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:12px solid var(--red);
+    filter:drop-shadow(0 0 4px rgba(255,45,45,.7))}
+  .pin.me .arrow{border-bottom-color:var(--orange); filter:drop-shadow(0 0 4px rgba(255,122,24,.8))}
+  .pin .spd{position:absolute; top:53px; left:50%; transform:translateX(-50%); white-space:nowrap;
+    font-size:10px; font-weight:800; color:var(--amber); text-shadow:0 1px 3px #000, 0 0 2px #000}
   /* HUD */
   #hud{position:fixed; z-index:500; left:0; right:0; top:0; padding:10px 12px;
     padding-top:calc(10px + env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; pointer-events:none}
@@ -80,13 +82,19 @@
     color:var(--orange-br); border-radius:14px; padding:9px 12px; font-weight:700; cursor:pointer; font-size:15px}
   #gear{margin-left:auto}
   #leave{background:rgba(225,6,0,.15); border:1px solid var(--red); color:#ff9b9b; font-size:13px}
-  /* speedometer */
-  #speedo{position:fixed; z-index:500; right:14px; bottom:calc(150px + env(safe-area-inset-bottom));
-    width:98px; height:98px; border-radius:50%; background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
+  /* speedometer — lower right */
+  #speedo{position:fixed; z-index:500; right:16px; bottom:calc(96px + env(safe-area-inset-bottom));
+    width:96px; height:96px; border-radius:50%; background:radial-gradient(circle at 50% 38%, #1c130b, #0a0a0b);
     border:2px solid var(--orange); box-shadow:0 0 32px rgba(255,122,24,.3); display:flex; flex-direction:column;
     align-items:center; justify-content:center}
   #speedo .big{font-size:30px; font-weight:900; color:var(--orange-br); line-height:1; font-variant-numeric:tabular-nums}
   #speedo .sm{font-size:10px; color:var(--muted); letter-spacing:1px}
+  /* recenter — sits above the speedo */
+  #recenter{position:fixed; z-index:500; right:16px; bottom:calc(204px + env(safe-area-inset-bottom));
+    width:48px; height:48px; border-radius:50%; background:rgba(22,17,13,.94); border:1px solid var(--orange);
+    color:var(--orange-br); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  #recenter.active{background:linear-gradient(90deg,var(--orange),var(--orange-br)); color:#1a0d02}
   /* convoy tray */
   #tray{position:fixed; z-index:500; left:0; right:0; bottom:0;
     padding:10px 12px calc(12px + env(safe-area-inset-bottom));
@@ -105,13 +113,12 @@
     top:calc(58px + env(safe-area-inset-top)); background:rgba(22,17,13,.92);
     border:1px solid var(--line); border-radius:12px; padding:5px 12px; font-size:12px; color:var(--muted)}
   #roomtag b{color:var(--orange-br); letter-spacing:3px; font-size:14px}
-  /* ---------- Settings panel ---------- */
+  /* ---------- Settings ---------- */
   #settings{position:fixed; inset:0; z-index:900; display:none; align-items:flex-end; justify-content:center;
     background:rgba(0,0,0,.55); backdrop-filter:blur(3px)}
   #settings.open{display:flex}
   .sheet{width:100%; max-width:460px; background:var(--panel); border:1px solid var(--line);
-    border-radius:20px 20px 0 0; padding:18px 18px calc(22px + env(safe-area-inset-bottom));
-    box-shadow:0 -20px 60px rgba(0,0,0,.7)}
+    border-radius:20px 20px 0 0; padding:18px 18px calc(22px + env(safe-area-inset-bottom)); box-shadow:0 -20px 60px rgba(0,0,0,.7)}
   .sheet h2{font-size:16px; letter-spacing:1px; margin-bottom:4px; display:flex; align-items:center; gap:8px}
   .sheet h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--orange)}
   .seth{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:16px 2px 8px}
@@ -141,9 +148,7 @@
   <div class="logo">CONVOY</div>
   <div class="tag">DRIVE TOGETHER · STAY TOGETHER</div>
   <div class="card">
-    <div id="cfgwarn" class="config-warn hidden">
-      ⚠️ Firebase not configured — running in <b>solo demo mode</b>.
-    </div>
+    <div id="cfgwarn" class="config-warn hidden">⚠️ Firebase not configured — running in <b>solo demo mode</b>.</div>
     <div class="label">Your avatar</div>
     <div class="emojis" id="emojiPick"></div>
     <div class="label">Your name</div>
@@ -168,6 +173,11 @@
   <button class="iconbtn" id="gear">⚙</button>
   <button class="iconbtn" id="leave">Leave</button>
 </div>
+<button id="recenter" class="hidden" title="Re-center on me">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <circle cx="12" cy="12" r="3.5"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+    <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+</button>
 <div id="speedo" class="hidden"><div class="big" id="bigspd">0</div><div class="sm" id="speedounit">KM/H</div></div>
 <div id="tray" class="hidden"></div>
 
@@ -179,16 +189,16 @@
     <div class="seg" id="styleSeg">
       <button data-style="night">🌃 Night</button>
       <button data-style="blackout">🏁 Blackout</button>
-      <button data-style="streets">🗺️ Streets</button>
+      <button data-style="day">☀️ Day</button>
       <button data-style="terrain">⛰️ Terrain</button>
     </div>
     <div class="seth">Driving</div>
     <div class="toggle">
-      <div><div class="t">Auto-follow me</div><div class="d">Keep the map centered on you as you drive</div></div>
+      <div><div class="t">Auto-follow me</div><div class="d">Re-center as you drive; pauses when you move the map, resumes after 10s</div></div>
       <div class="sw" id="swFollow"></div>
     </div>
     <div class="toggle">
-      <div><div class="t">Speed labels on map</div><div class="d">Show each driver's speed under their emoji</div></div>
+      <div><div class="t">Speed labels on map</div><div class="d">Show each driver's speed under their bubble</div></div>
       <div class="sw" id="swLabels"></div>
     </div>
     <div class="toggle">
@@ -209,9 +219,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-/* =========================================================================
-   FIREBASE CONFIG
-   ========================================================================= */
+/* ===================== FIREBASE CONFIG ===================== */
 const firebaseConfig = {
   apiKey:            "AIzaSyCQVPQG2BP26cddrnvabh36UFVWyuxJsaM",
   authDomain:        "convoy-408d8.firebaseapp.com",
@@ -221,47 +229,43 @@ const firebaseConfig = {
   messagingSenderId: "203749542302",
   appId:             "1:203749542302:web:e0554b8d3051f0efc22e8f"
 };
-/* ========================================================================= */
+/* =========================================================== */
 const CONFIGURED = !!firebaseConfig.databaseURL;
 const EMOJIS = ["🏎️","🚗","🚙","🛻","🚐","🏍️","🚓","🚕","🚌","🛵","🚜","🦊","🐺","🐉","⚡","🔥"];
-const STALE_MS = 12000;
+const STALE_MS = 12000, FOLLOW_RESUME_MS = 10000;
 const $ = id => document.getElementById(id);
 
-/* ---------- settings (persisted) ---------- */
+/* settings */
 const DEF = { mapStyle:"night", follow:true, units:"kmh", spdLabels:true, wake:false };
 let settings = loadSettings();
 function loadSettings(){ try{ return Object.assign({}, DEF, JSON.parse(localStorage.getItem("convoySettings")||"{}")); }catch(e){ return {...DEF}; } }
 function saveSettings(){ try{ localStorage.setItem("convoySettings", JSON.stringify(settings)); }catch(e){} }
 
 const MAP_STYLES = {
-  night:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",      sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",   max:20 },
-  blackout: { url:"https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none",   max:20 },
-  streets:  { url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                 sub:"abc",  attr:"© OpenStreetMap",         filter:"invert", max:19 },
-  terrain:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                   sub:"abc",  attr:"© OpenTopoMap (CC-BY-SA)",filter:"darken", max:17 }
+  night:    { url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",      sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"night",    max:20 },
+  blackout: { url:"https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"blackout", max:20 },
+  day:      { url:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", sub:"abcd", attr:"© OpenStreetMap © CARTO", filter:"none", max:20 },
+  terrain:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                   sub:"abc",  attr:"© OpenTopoMap (CC-BY-SA)", filter:"terrain", max:17 }
 };
 
 let db, auth, uid, room, me = { emoji:"🏎️", name:"" };
 let map, tileLayer, watchId, markers = {}, players = {}, roomRef, myRef;
-let lastLatLng = null, followMe = settings.follow, wakeLock = null;
+let lastLatLng = null, myHeading = null, wakeLock = null;
+let followMe = settings.follow, resumeT = null;
 
-/* ---------- lobby setup ---------- */
+/* lobby */
 const emojiBox = $("emojiPick");
-EMOJIS.forEach((e,i)=>{
-  const b=document.createElement("button");
-  b.textContent=e; if(i===0)b.classList.add("sel");
+EMOJIS.forEach((e,i)=>{ const b=document.createElement("button"); b.textContent=e; if(i===0)b.classList.add("sel");
   b.onclick=()=>{ [...emojiBox.children].forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); me.emoji=e; };
-  emojiBox.appendChild(b);
-});
+  emojiBox.appendChild(b); });
 $("code").addEventListener("input", e=> e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"") );
 if(!CONFIGURED) $("cfgwarn").classList.remove("hidden");
-
 if(CONFIGURED){ firebase.initializeApp(firebaseConfig); db=firebase.database(); auth=firebase.auth(); }
 
 function randCode(){ let s=""; const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; for(let i=0;i<5;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
 function showErr(m){ $("err").textContent = m||""; }
-
-$("createBtn").onclick = ()=> start(randCode(), true);
-$("joinBtn").onclick   = ()=>{ const c=$("code").value.trim(); if(c.length<4) return showErr("Enter a convoy code (or tap Create)."); start(c,false); };
+$("createBtn").onclick = ()=> start(randCode());
+$("joinBtn").onclick   = ()=>{ const c=$("code").value.trim(); if(c.length<4) return showErr("Enter a convoy code (or tap Create)."); start(c); };
 
 async function start(code){
   me.name = ($("name").value.trim() || "Driver").slice(0,12);
@@ -269,10 +273,8 @@ async function start(code){
   if(!navigator.geolocation){ return showErr("This device can't share location."); }
   try{
     if(CONFIGURED){
-      const cred = await auth.signInAnonymously();
-      uid = cred.user.uid;
-      roomRef = db.ref("rooms/"+room+"/players");
-      myRef = roomRef.child(uid);
+      const cred = await auth.signInAnonymously(); uid = cred.user.uid;
+      roomRef = db.ref("rooms/"+room+"/players"); myRef = roomRef.child(uid);
       myRef.onDisconnect().remove();
       roomRef.on("value", snap => render(snap.val()||{}));
     } else { uid="me"; seedDemo(); }
@@ -280,16 +282,17 @@ async function start(code){
   enterMap(); startTracking(); applyWake();
 }
 
-/* ---------- map ---------- */
+/* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["hud","speedo","tray","roomtag"].forEach(i=>$(i).classList.remove("hidden"));
+  ["hud","speedo","tray","roomtag","recenter"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
-  map = L.map("map",{zoomControl:false, attributionControl:true}).setView([37.7749,-122.4194], 15);
+  map = L.map("map",{zoomControl:false, attributionControl:true}).setView([13.7563,100.5018], 15); // Bangkok default
   L.control.zoom({position:"bottomleft"}).addTo(map);
   setMapStyle(settings.mapStyle);
-  map.on("dragstart", ()=>{ followMe=false; });
-  syncSettingsUI();
+  const c = map.getContainer();
+  ["touchstart","pointerdown","wheel"].forEach(ev=> c.addEventListener(ev, pauseFollow, {passive:true}));
+  syncSettingsUI(); updateRecenterBtn();
 }
 
 function setMapStyle(key){
@@ -305,11 +308,12 @@ function dispSpeed(kmh){ const v = settings.units==="mph" ? Math.round(kmh*0.621
 function icon(p, isMe){
   const stale = Date.now() - (p.ts||0) > STALE_MS;
   const sp = dispSpeed(p.speed||0);
+  const h = (typeof p.heading==="number") ? p.heading : null;
   return L.divIcon({
-    className:"", iconSize:[60,46], iconAnchor:[30,40],
-    html:`<div class="marker ${isMe?'me':''}">
-            <div class="bubble" style="opacity:${stale?.4:1}">${p.emoji||"🚗"}</div>
-            <div class="tagname">${esc(p.name||"Driver")}</div>
+    className:"", iconSize:[60,60], iconAnchor:[30,30],
+    html:`<div class="pin ${isMe?'me':''}" style="opacity:${stale?.45:1}">
+            ${h!=null?`<div class="dir" style="transform:rotate(${h}deg)"><div class="arrow"></div></div>`:""}
+            <div class="ring">${p.emoji||"🚗"}</div>
             ${settings.spdLabels?`<div class="spd">${sp.v} ${sp.u}</div>`:""}
           </div>`
   });
@@ -333,64 +337,82 @@ function drawTray(data){
   const tray=$("tray"); tray.innerHTML="";
   Object.entries(data).sort((a,b)=>(b[1].speed||0)-(a[1].speed||0)).forEach(([k,p])=>{
     const isMe=k===uid, stale=Date.now()-(p.ts||0)>STALE_MS, sp=dispSpeed(p.speed||0);
-    const d=document.createElement("div");
-    d.className="driver"+(isMe?" me":"");
+    const d=document.createElement("div"); d.className="driver"+(isMe?" me":"");
     d.innerHTML=`<div class="top"><span class="em">${p.emoji||"🚗"}</span>
         <span class="nm">${esc(p.name||"Driver")}${isMe?" (you)":""}</span></div>
       <span class="sp ${stale?'stale':''}">${sp.v}<small> ${sp.u}</small></span>`;
-    d.onclick=()=>{ if(typeof p.lat==="number"){ followMe=isMe; map.panTo([p.lat,p.lng]); } };
+    d.onclick=()=>{ if(typeof p.lat==="number"){ if(isMe) recenterNow(); else { followMe=false; clearTimeout(resumeT); map.panTo([p.lat,p.lng]); updateRecenterBtn(); } } };
     tray.appendChild(d);
   });
 }
 
-/* ---------- geolocation ---------- */
+/* geolocation + heading */
+let _prev=null;
 function startTracking(){
   watchId = navigator.geolocation.watchPosition(pos=>{
-    const {latitude:lat, longitude:lng, speed} = pos.coords;
-    const kmh = (speed!=null && speed>=0) ? Math.round(speed*3.6) : estSpeed(lat,lng,pos.timestamp);
+    const {latitude:lat, longitude:lng, speed, heading} = pos.coords;
+    let kmh = (speed!=null && speed>=0) ? Math.round(speed*3.6) : undefined;
+    let bearing = (heading!=null && !isNaN(heading)) ? heading : null;
+    if(_prev){
+      const d=haversine(_prev.lat,_prev.lng,lat,lng), dt=(pos.timestamp-_prev.t)/1000;
+      if(kmh===undefined) kmh = dt>0 ? Math.round(d/dt*3.6) : 0;
+      if(bearing===null && d>3) bearing = bearingDeg(_prev.lat,_prev.lng,lat,lng);
+    }
+    if(kmh===undefined) kmh=0;
+    _prev={lat,lng,t:pos.timestamp};
+    if(bearing!=null) myHeading=bearing;
     lastLatLng=[lat,lng];
+
     const sp=dispSpeed(kmh);
     $("hudspd").textContent=sp.v; $("hudunit").textContent=sp.u;
     $("bigspd").textContent=sp.v; $("speedounit").textContent=sp.u.toUpperCase();
+
     const data={ emoji:me.emoji, name:me.name, lat, lng, speed:kmh, ts:Date.now() };
+    if(myHeading!=null) data.heading = Math.round(myHeading);
     if(CONFIGURED && myRef){ myRef.set(data); } else { players[uid]=data; render(players); moveDemo(); }
     if(followMe) map.setView([lat,lng], map.getZoom()<14?16:map.getZoom());
-  }, err=>{
-    console.warn(err);
-    alert("Location permission is needed to share your position. Enable it in your browser settings.");
-  }, { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
-}
-let _prev=null;
-function estSpeed(lat,lng,t){
-  if(_prev){ const d=haversine(_prev.lat,_prev.lng,lat,lng); const dt=(t-_prev.t)/1000; _prev={lat,lng,t}; return dt>0?Math.round(d/dt*3.6):0; }
-  _prev={lat,lng,t}; return 0;
+  }, err=>{ console.warn(err); alert("Location permission is needed. Enable it in your browser settings."); },
+  { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
 }
 function haversine(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180;
   const dLat=r(c-a),dLng=r(d-b);const s=Math.sin(dLat/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(s));}
+function bearingDeg(la1,lo1,la2,lo2){const r=x=>x*Math.PI/180;
+  const y=Math.sin(r(lo2-lo1))*Math.cos(r(la2));
+  const x=Math.cos(r(la1))*Math.sin(r(la2))-Math.sin(r(la1))*Math.cos(r(la2))*Math.cos(r(lo2-lo1));
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;}
 
-/* ---------- keep screen on ---------- */
+/* smart follow */
+function pauseFollow(){
+  followMe=false; clearTimeout(resumeT); updateRecenterBtn();
+  if(settings.follow){ resumeT=setTimeout(()=>{ followMe=true; updateRecenterBtn(); if(lastLatLng) map.setView(lastLatLng, map.getZoom()); }, FOLLOW_RESUME_MS); }
+}
+function recenterNow(){
+  clearTimeout(resumeT);
+  if(settings.follow) followMe=true;
+  if(lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(),16));
+  updateRecenterBtn();
+}
+function updateRecenterBtn(){ $("recenter").classList.toggle("active", followMe); }
+$("recenter").onclick = recenterNow;
+
+/* keep screen on */
 async function applyWake(){
   if(!('wakeLock' in navigator)) return;
-  try{
-    if(settings.wake){ wakeLock = await navigator.wakeLock.request("screen"); }
-    else if(wakeLock){ await wakeLock.release(); wakeLock=null; }
-  }catch(e){ console.warn("wakeLock", e); }
+  try{ if(settings.wake){ wakeLock = await navigator.wakeLock.request("screen"); } else if(wakeLock){ await wakeLock.release(); wakeLock=null; } }
+  catch(e){ console.warn("wakeLock", e); }
 }
 document.addEventListener("visibilitychange", ()=>{ if(settings.wake && document.visibilityState==="visible") applyWake(); });
 
-/* ---------- settings UI ---------- */
+/* settings UI */
 $("gear").onclick = ()=> $("settings").classList.add("open");
 $("closeSettings").onclick = ()=> $("settings").classList.remove("open");
 $("settings").addEventListener("click", e=>{ if(e.target.id==="settings") $("settings").classList.remove("open"); });
-
 document.querySelectorAll("#styleSeg button").forEach(b=> b.onclick=()=>{ setMapStyle(b.dataset.style); syncSettingsUI(); });
 document.querySelectorAll("#unitSeg button").forEach(b=> b.onclick=()=>{ settings.units=b.dataset.unit; saveSettings(); syncSettingsUI(); render(players); });
-
-$("swFollow").onclick = ()=>{ settings.follow=!settings.follow; followMe=settings.follow; saveSettings(); syncSettingsUI(); if(followMe&&lastLatLng)map.panTo(lastLatLng); };
+$("swFollow").onclick = ()=>{ settings.follow=!settings.follow; followMe=settings.follow; saveSettings(); syncSettingsUI(); updateRecenterBtn(); if(followMe&&lastLatLng)map.panTo(lastLatLng); };
 $("swLabels").onclick = ()=>{ settings.spdLabels=!settings.spdLabels; saveSettings(); syncSettingsUI(); render(players); };
 $("swWake").onclick   = ()=>{ settings.wake=!settings.wake; saveSettings(); syncSettingsUI(); applyWake(); };
-
 function syncSettingsUI(){
   document.querySelectorAll("#styleSeg button").forEach(b=> b.classList.toggle("on", b.dataset.style===settings.mapStyle));
   document.querySelectorAll("#unitSeg button").forEach(b=> b.classList.toggle("on", b.dataset.unit===settings.units));
@@ -399,7 +421,7 @@ function syncSettingsUI(){
   $("swWake").classList.toggle("on", settings.wake);
 }
 
-/* ---------- leave ---------- */
+/* leave */
 $("leave").onclick = ()=>{
   if(watchId) navigator.geolocation.clearWatch(watchId);
   if(wakeLock){ wakeLock.release().catch(()=>{}); }
@@ -407,19 +429,18 @@ $("leave").onclick = ()=>{
   location.reload();
 };
 
-/* ---------- demo mode ---------- */
+/* demo mode */
 let demo=[];
 function seedDemo(){ demo=[
-  {id:"bot1",emoji:"🚙",name:"Nyx",off:[ .0015, .0010]},
-  {id:"bot2",emoji:"🏍️",name:"Rev",off:[-.0012, .0018]} ]; }
+  {id:"bot1",emoji:"🚙",name:"Nyx",off:[ .0015, .0010],h:120},
+  {id:"bot2",emoji:"🏍️",name:"Rev",off:[-.0012, .0018],h:300} ]; }
 function moveDemo(){
   if(!lastLatLng) return;
-  demo.forEach(b=>{ b.off[0]+=(Math.random()-0.5)*.0004; b.off[1]+=(Math.random()-0.5)*.0004;
-    players[b.id]={emoji:b.emoji,name:b.name,lat:lastLatLng[0]+b.off[0],lng:lastLatLng[1]+b.off[1],speed:40+Math.round(Math.random()*40),ts:Date.now()}; });
+  demo.forEach(b=>{ b.off[0]+=(Math.random()-0.5)*.0004; b.off[1]+=(Math.random()-0.5)*.0004; b.h=(b.h+(Math.random()*40-20)+360)%360;
+    players[b.id]={emoji:b.emoji,name:b.name,lat:lastLatLng[0]+b.off[0],lng:lastLatLng[1]+b.off[1],speed:40+Math.round(Math.random()*40),heading:Math.round(b.h),ts:Date.now()}; });
   render(players);
 }
 
-/* keep stale styling fresh */
 setInterval(()=>{ if(map){ drawTray(players); Object.entries(players).forEach(([k,p])=>{ if(markers[k]) markers[k].setIcon(icon(p,k===uid)); }); } }, 4000);
 </script>
 </body>
