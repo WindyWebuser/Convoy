@@ -6,7 +6,8 @@
 <meta name="theme-color" content="#0a0a0b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Convoy</title>
+<meta name="apple-mobile-web-app-title" content="OvertakeZ">
+<title>OvertakeZ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
   :root{
@@ -25,17 +26,27 @@
       radial-gradient(900px 520px at 50% -12%, rgba(255,122,24,.22), transparent 60%),
       radial-gradient(700px 420px at 50% 115%, rgba(225,6,0,.18), transparent 60%),
       repeating-linear-gradient(45deg, #0a0a0b 0 22px, #0e0c0a 22px 44px);}
-  .logo{font-weight:900; letter-spacing:5px; font-size:36px;
+  .logo{font-weight:900; letter-spacing:3px; font-size:38px;
     background:linear-gradient(90deg,var(--orange),var(--red-deep));
     -webkit-background-clip:text; background-clip:text; color:transparent;
     text-shadow:0 0 34px rgba(255,122,24,.3);}
-  .tag{color:var(--muted); font-size:12px; margin-top:-10px; letter-spacing:2px}
+  .logo .zed{font-style:italic; font-size:1.35em; display:inline-block; transform:skewX(-10deg);
+    background:linear-gradient(90deg,var(--orange-br),var(--red));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 14px rgba(255,80,0,.75)); margin-left:2px}
+  .tag{color:var(--muted); font-size:12px; margin-top:-8px; letter-spacing:2px}
+  #installBtn{position:absolute; top:calc(14px + env(safe-area-inset-top)); left:14px; z-index:1001;
+    background:rgba(22,17,13,.92); border:1px solid var(--orange); color:var(--orange-br);
+    border-radius:12px; padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer}
+  #ver{position:absolute; bottom:calc(12px + env(safe-area-inset-bottom)); left:0; right:0;
+    text-align:center; color:var(--muted); font-size:11px; letter-spacing:1.5px; opacity:.7}
   .card{width:100%; max-width:380px; background:var(--panel);
     border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:0 20px 70px rgba(0,0,0,.7)}
   .label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:10px 2px 6px}
-  .emojis{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
-  .emojis button{font-size:24px; width:46px; height:46px; border-radius:12px;
+  .emojis{display:grid; grid-template-columns:repeat(6,1fr); gap:8px}
+  .emojis button{font-size:24px; width:100%; height:46px; border-radius:12px;
     background:#0d0b09; border:1px solid var(--line); cursor:pointer; transition:.15s}
+  #customTile{color:var(--orange-br); font-weight:800}
   .emojis button.sel{border-color:var(--orange); box-shadow:0 0 0 2px rgba(255,122,24,.35); transform:scale(1.08)}
   input{width:100%; padding:13px 14px; border-radius:12px; background:#0d0b09;
     border:1px solid var(--line); color:var(--text); font-size:16px; outline:none}
@@ -48,7 +59,7 @@
   .row{display:flex; gap:10px}
   .row .btn{margin-top:0}
   .err{color:var(--red); font-size:13px; min-height:18px; text-align:center; margin-top:8px}
-  .hint{color:var(--muted); font-size:12px; text-align:center; margin-top:14px; line-height:1.5}
+  .hint{color:var(--muted); font-size:10px; text-align:center; margin-top:10px; line-height:1.4; opacity:.8}
   .config-warn{background:rgba(255,180,84,.12); border:1px solid var(--amber); color:var(--amber);
     padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px; line-height:1.5}
   /* ---------- Map ---------- */
@@ -72,6 +83,9 @@
   .pin.me .nm{color:var(--orange-br)}
   .pin .spd{position:absolute; top:65px; left:50%; transform:translateX(-50%); white-space:nowrap;
     font-size:10px; font-weight:800; color:var(--amber); text-shadow:0 1px 3px #000, 0 0 2px #000}
+  /* top fade — sits between map and UI, mirrors the bottom tray gradient */
+  #topfade{position:fixed; left:0; right:0; top:0; height:150px; z-index:400; pointer-events:none;
+    background:linear-gradient(180deg, rgba(10,10,11,.95), rgba(10,10,11,.45) 55%, transparent)}
   /* HUD */
   #hud{position:fixed; z-index:500; left:0; right:0; top:0; padding:10px 12px;
     padding-top:calc(10px + env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; pointer-events:none}
@@ -159,8 +173,9 @@
 
 <!-- ============ LOBBY ============ -->
 <div id="lobby">
-  <div class="logo">CONVOY</div>
-  <div class="tag">DRIVE TOGETHER · STAY TOGETHER</div>
+  <button id="installBtn" class="hidden">⬇ Install app</button>
+  <div class="logo">Overtake<span class="zed">Z</span></div>
+  <div class="tag">Join your crew!</div>
   <div class="card">
     <div id="cfgwarn" class="config-warn hidden">⚠️ Firebase not configured — running in <b>solo demo mode</b>.</div>
     <div class="label">Your avatar</div>
@@ -168,23 +183,25 @@
     <input id="customEmoji" maxlength="16" autocomplete="off" aria-hidden="true"
       style="position:absolute; left:-9999px; width:2em; height:1px; opacity:0">
     <div class="label">Your name</div>
-    <input id="name" maxlength="12" placeholder="e.g. Maverick" autocomplete="off">
+    <input id="name" maxlength="12" placeholder="e.g. Charlie Kirk" autocomplete="off">
     <div class="label">Car model (optional)</div>
-    <input id="model" maxlength="20" placeholder="e.g. GR Yaris" autocomplete="off">
-    <div class="label">Convoy code</div>
+    <input id="model" maxlength="20" placeholder="e.g. 320d" autocomplete="off">
+    <div class="label">Crew code</div>
     <input id="code" maxlength="5" placeholder="ABCDE" autocomplete="off">
     <div class="row" style="margin-top:12px">
       <button class="btn" id="joinBtn">Join</button>
       <button class="btn ghost" id="createBtn">Create</button>
     </div>
     <div class="err" id="err"></div>
-    <div class="hint">Location is shared only with people in your convoy, only while the app is open. Leave anytime to stop sharing.</div>
+    <div class="hint">Location is shared only with your crew, only while the app is open.</div>
   </div>
+  <div id="ver">OvertakeZ v1.0</div>
 </div>
 
 <!-- ============ MAP ============ -->
 <div id="map"></div>
-<div id="roomtag" class="hidden">CONVOY <b id="roomcode">—</b></div>
+<div id="topfade" class="hidden"></div>
+<div id="roomtag" class="hidden">CREW <b id="roomcode">—</b></div>
 <div id="hud" class="hidden">
   <div class="pill" id="spdpill"><span class="k">You</span><span class="v" id="hudspd">0</span><span class="u" id="hudunit">km/h</span></div>
   <div class="pill"><span class="k">Crew</span><span class="v" id="hudcount">1</span></div>
@@ -256,7 +273,7 @@ const firebaseConfig = {
 };
 /* =========================================================== */
 const CONFIGURED = !!firebaseConfig.databaseURL;
-const EMOJIS = ["🏎️","🚗","🚀","🛸","👽","🤖","💀","👻","🐉","🦄","🐺","🦊","🐢","🐌","⚡","🔥","🎯","🦅"];
+const EMOJIS = ["🏎️","🚗","🚀","🛸","👽","🤖","💀","👻","🐉","🦄","🐺","🐢","🐌","⚡","🔥","🎯","🦅"];
 const STALE_MS = 12000, FOLLOW_RESUME_MS = 10000;
 const $ = id => document.getElementById(id);
 
@@ -300,10 +317,43 @@ $("code").addEventListener("input", e=> e.target.value = e.target.value.toUpperC
 if(!CONFIGURED) $("cfgwarn").classList.remove("hidden");
 if(CONFIGURED){ firebase.initializeApp(firebaseConfig); db=firebase.database(); auth=firebase.auth(); }
 
+/* ---------- PWA: app icon, manifest, install ---------- */
+(function setupPWA(){
+  let iconURL="";
+  try{
+    const c=document.createElement("canvas"); c.width=c.height=512; const x=c.getContext("2d");
+    x.fillStyle="#0a0a0b"; x.fillRect(0,0,512,512);
+    const g=x.createLinearGradient(120,120,400,420); g.addColorStop(0,"#ff9a3c"); g.addColorStop(1,"#e10600");
+    x.fillStyle=g; x.font="italic 900 320px -apple-system,Arial,sans-serif"; x.textAlign="center"; x.textBaseline="middle";
+    x.fillText("Z",256,286); iconURL=c.toDataURL("image/png");
+  }catch(e){}
+  if(iconURL){
+    const at=document.createElement("link"); at.rel="apple-touch-icon"; at.href=iconURL; document.head.appendChild(at);
+    const man={ name:"OvertakeZ", short_name:"OvertakeZ", start_url:location.href, display:"standalone",
+      background_color:"#0a0a0b", theme_color:"#0a0a0b",
+      icons:[{src:iconURL,sizes:"192x192",type:"image/png",purpose:"any"},
+             {src:iconURL,sizes:"512x512",type:"image/png",purpose:"any maskable"}] };
+    const ml=document.createElement("link"); ml.rel="manifest";
+    ml.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(man)); document.head.appendChild(ml);
+  }
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone=(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone;
+  let deferred=null;
+  window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferred=e; $("installBtn").classList.remove("hidden"); });
+  if(!standalone && isIOS) $("installBtn").classList.remove("hidden");
+  $("installBtn").onclick = async ()=>{
+    if(deferred){ deferred.prompt(); await deferred.userChoice; deferred=null; $("installBtn").classList.add("hidden"); }
+    else if(isIOS){ alert("Install OvertakeZ:\n\n1. Tap the Share button (square with an up-arrow).\n2. Scroll down and tap 'Add to Home Screen'."); }
+    else { alert("Install OvertakeZ:\n\nOpen the browser menu (⋮) and tap 'Install app' or 'Add to Home screen'."); }
+  };
+})();
+
 function randCode(){ let s=""; const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; for(let i=0;i<5;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
 function showErr(m){ $("err").textContent = m||""; }
 $("createBtn").onclick = ()=> start(randCode());
-$("joinBtn").onclick   = ()=>{ const c=$("code").value.trim(); if(c.length<4) return showErr("Enter a convoy code (or tap Create)."); start(c); };
+$("joinBtn").onclick   = ()=>{ const c=$("code").value.trim(); if(c.length<4) return showErr("Enter a crew code (or tap Create)."); start(c); };
 
 async function start(code){
   me.name = ($("name").value.trim() || "Driver").slice(0,12);
@@ -324,7 +374,7 @@ async function start(code){
 /* map */
 function enterMap(){
   $("lobby").classList.add("hidden");
-  ["hud","speedo","tray","roomtag","recenter","zoompill"].forEach(i=>$(i).classList.remove("hidden"));
+  ["topfade","hud","speedo","tray","roomtag","recenter","zoompill"].forEach(i=>$(i).classList.remove("hidden"));
   $("roomcode").textContent = room;
   map = L.map("map",{zoomControl:false, attributionControl:true, zoomSnap:0.5, zoomDelta:0.5}).setView([13.7563,100.5018], 15); // Bangkok default
   setMapStyle(settings.mapStyle);
