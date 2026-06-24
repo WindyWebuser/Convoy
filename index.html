@@ -470,6 +470,11 @@ function animLoop(now){
     markers[k].setLatLng([ a.fromLat+(a.toLat-a.fromLat)*e, a.fromLng+(a.toLng-a.fromLng)*e ]);
     if(p>=1) delete animMap[k];
   }
+  // keep the map glued to the smoothed self position every frame (no per-fix pan stutter)
+  if(followMe){
+    if(markers[uid]) map.panTo(markers[uid].getLatLng(), {animate:false});
+    else if(lastLatLng) map.panTo(lastLatLng, {animate:false});
+  }
   requestAnimationFrame(animLoop);
 }
 requestAnimationFrame(animLoop);
@@ -518,7 +523,7 @@ function startTracking(){
     if(myHeading!=null) data.heading = Math.round(myHeading);
     if(me.model) data.model = me.model;
     if(CONFIGURED && myRef){ myRef.set(data); } else { players[uid]=data; render(players); moveDemo(); }
-    if(followMe){ const z=map.getZoom()<14?16:map.getZoom(); map.setView([lat,lng], z, {animate:true, duration:1, easeLinearity:1}); if(courseUp && myHeading!=null) setBearingSafe(myHeading); }
+    if(followMe){ if(map.getZoom()<14) map.setZoom(16); if(courseUp && myHeading!=null) setBearingSafe(myHeading); }
   }, err=>{ console.warn(err); alert("Location permission is needed. Enable it in your browser settings."); },
   { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
 }
