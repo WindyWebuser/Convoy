@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0a0a0b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="OvertakeZ">
-<title>OvertakeZ</title>
+<meta name="apple-mobile-web-app-title" content="Zlipstream">
+<title>Zlipstream</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
   :root{
@@ -34,7 +34,7 @@
   .logo .zed{font-style:italic; font-size:1.35em; display:inline-block; transform:skewX(-10deg);
     background:linear-gradient(90deg,var(--orange-br),var(--red));
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 14px rgba(255,80,0,.75)); margin-left:2px}
+    filter:drop-shadow(0 0 14px rgba(255,80,0,.75)); margin-right:2px}
   .tag{color:var(--muted); font-size:12px; margin-top:-8px; letter-spacing:2px}
   #installBtn{position:absolute; top:calc(14px + env(safe-area-inset-top)); left:14px; z-index:1001;
     background:rgba(22,17,13,.92); border:1px solid var(--orange); color:var(--orange-br);
@@ -179,7 +179,7 @@
 <!-- ============ LOBBY ============ -->
 <div id="lobby">
   <button id="installBtn" class="hidden">⬇ Install app</button>
-  <div class="logo">Overtake<span class="zed">Z</span></div>
+  <div class="logo"><span class="zed">Z</span>lipstream</div>
   <div class="tag">Join your crew!</div>
   <div class="card">
     <div id="cfgwarn" class="config-warn hidden">⚠️ Firebase not configured — running in <b>solo demo mode</b>.</div>
@@ -200,7 +200,7 @@
     <div class="err" id="err"></div>
     <div class="hint">Location is shared only with your crew, only while the app is open.</div>
   </div>
-  <div id="ver">OvertakeZ v1.0</div>
+  <div id="ver">Zlipstream v1.0</div>
 </div>
 
 <!-- ============ MAP ============ -->
@@ -338,7 +338,7 @@ if(CONFIGURED){ firebase.initializeApp(firebaseConfig); db=firebase.database(); 
   }catch(e){}
   if(iconURL){
     const at=document.createElement("link"); at.rel="apple-touch-icon"; at.href=iconURL; document.head.appendChild(at);
-    const man={ name:"OvertakeZ", short_name:"OvertakeZ", start_url:location.href, display:"standalone",
+    const man={ name:"Zlipstream", short_name:"Zlipstream", start_url:location.href, display:"standalone",
       background_color:"#0a0a0b", theme_color:"#0a0a0b",
       icons:[{src:iconURL,sizes:"192x192",type:"image/png",purpose:"any"},
              {src:iconURL,sizes:"512x512",type:"image/png",purpose:"any maskable"}] };
@@ -354,8 +354,8 @@ if(CONFIGURED){ firebase.initializeApp(firebaseConfig); db=firebase.database(); 
   if(!standalone && isIOS) $("installBtn").classList.remove("hidden");
   $("installBtn").onclick = async ()=>{
     if(deferred){ deferred.prompt(); await deferred.userChoice; deferred=null; $("installBtn").classList.add("hidden"); }
-    else if(isIOS){ alert("Install OvertakeZ:\n\n1. Tap the Share button (square with an up-arrow).\n2. Scroll down and tap 'Add to Home Screen'."); }
-    else { alert("Install OvertakeZ:\n\nOpen the browser menu (⋮) and tap 'Install app' or 'Add to Home screen'."); }
+    else if(isIOS){ alert("Install Zlipstream:\n\n1. Tap the Share button (square with an up-arrow).\n2. Scroll down and tap 'Add to Home Screen'."); }
+    else { alert("Install Zlipstream:\n\nOpen the browser menu (⋮) and tap 'Install app' or 'Add to Home screen'."); }
   };
 })();
 
