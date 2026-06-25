@@ -476,7 +476,7 @@ function animLoop(now){
     const d=((targetBearing-curBearing+540)%360)-180;
     if(Math.abs(d)>0.05){
       curBearing=(curBearing + d*0.025 + 360)%360;
-      map.setBearing(curBearing);
+      map.setBearing(-curBearing);
       // re-aim every arrow this frame so they track the rotating map (no per-second snap)
       for(const k in markers){
         const m=markers[k]; if(m._heading==null) continue;
@@ -485,7 +485,7 @@ function animLoop(now){
         const nr=prev+(((tgt-prev)%360+540)%360-180);
         m._rot=nr; dir.style.transition="none"; dir.style.transform=`rotate(${nr}deg)`;
       }
-    } else if(curBearing!==targetBearing){ curBearing=targetBearing; map.setBearing(curBearing); }
+    } else if(curBearing!==targetBearing){ curBearing=targetBearing; map.setBearing(-curBearing); }
   }
   // keep the map glued to the smoothed self position every frame (no per-fix pan stutter)
   if(followMe){
